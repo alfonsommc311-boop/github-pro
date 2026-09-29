@@ -21,7 +21,7 @@ También se publica en GitHub Pages con el workflow `.github/workflows/pages.yml
 
 ## Construir el APK
 
-Requiere Flutter (canal stable) y Java 17. Puerto del servidor local: **9048**; applicationId `com.alfonso.githubpro`.
+Requiere Flutter (canal stable) y Java 17. Puerto del servidor local: **9051**; applicationId `com.alfonso.githubpro`.
 
 ```bash
 flutter pub get

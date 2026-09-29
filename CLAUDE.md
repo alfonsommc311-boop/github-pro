@@ -3,7 +3,7 @@
 App formativa Android (familia Experto/PRO) para convertirse en **experto en Git y GitHub**: cómo funciona Git por dentro, el ciclo diario de commits y ramas, colaboración con pull requests y revisión, GitHub Actions, publicación (Pages, releases, paquetes), seguridad del repositorio y el flujo de trabajo con **Claude Code**, Copilot y la CLI `gh`. Incluye una **terminal Git simulada** con retos guiados. Clon estructural de Decisiones PRO (mismo motor `Lesson.start`, mismo shell Flutter + WebView + TTS).
 
 Reglas de este proyecto:
-- Usa el skill `app-formativa-flutter` para el ciclo completo. Puerto **9048** (verificar en `ports.md` que esté libre antes de compilar), applicationId `com.alfonso.githubpro`, prefijo de storage `gh`.
+- Usa el skill `app-formativa-flutter` para el ciclo completo. Puerto **9051** (verificar en `ports.md` que esté libre antes de compilar), applicationId `com.alfonso.githubpro`, prefijo de storage `gh`.
 - Fuentes: `_brief/brief.md` (reglas de rigor y formato), `_brief/anclas.md` (contenido por lección), `_brief/lotes.md` (estado de los lotes). Catálogo en `assets/web/assets/catalog.js` (12 áreas, 55 lecciones).
 - **Todo comando debe ser real y correcto**; nada de flags inventados. La interfaz web de GitHub se describe por nombres en inglés y toda lección remite a verificar en docs.github.com. Nunca cifras de límites ni precios.
 - Repos de ejemplo ficticios: `alfonsommc311-boop/metrados-pro`, `word-mcp`, `cotizador-web`; personas ficticias (Rocío, Mateo). Cero personas o empresas reales señaladas.

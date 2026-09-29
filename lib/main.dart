@@ -7,7 +7,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 // Servidor local que sirve la app de aprendizaje en http://localhost:8983
 // Puerto propio por app de la familia para evitar el conflicto
 // "Address already in use" cuando otra app de la familia está activa.
-const int kServerPort = 9048;
+const int kServerPort = 9051;
 final InAppLocalhostServer _server = InAppLocalhostServer(port: kServerPort);
 
 Future<void> main() async {
