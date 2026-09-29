@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Glosario · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Glosario de Git y GitHub</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>📖 <span class="em">Glosario</span> de Git y GitHub</h1>
+    <div class="lead">Términos de Git, de la plataforma GitHub, de Actions y del trabajo con asistentes de IA, en lenguaje llano y con el comando o la pantalla donde aparecen. Son definiciones de estudio: la interfaz y los planes de GitHub cambian, <b>verifica en docs.github.com</b> antes de sustentar algo con ellas.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <div class="field wide"><label>Buscar un término</label>
+      <input type="search" id="q" placeholder="Ej. commit, HEAD, fast-forward, upstream, squash, reflog, runner, secret, fork...">
+    </div>
+    <div class="rfilters" id="cats"></div>
+    <div class="thelp" id="cuenta"></div>
+  </div>
+
+  <div id="lista"></div>
+  <div id="vacio" class="warnbox" style="display:none"></div>
+
+  <div class="foot">GitHub PRO v1.0 · El glosario funciona sin internet.</div>
+
+<script src="assets/engine.js"></script>
+<script src="assets/tools.js"></script>
+<script src="assets/glosario.js"></script>
+<script>
+(function () {
+  document.getElementById('nav').appendChild(Tools.nav('glosario.html'));
+  var DATA = (typeof GLOSARIO !== 'undefined') ? GLOSARIO.slice() : [];
+  var clave = Tools.clave, esc = Tools.esc;
+  DATA.sort(function (a, b) { return clave(a.t) < clave(b.t) ? -1 : 1; });
+  var cats = []; DATA.forEach(function (d) { if (d.cat && cats.indexOf(d.cat) === -1) cats.push(d.cat); });
+  var catActiva = '';
+  var cbox = document.getElementById('cats');
+  function pintarCats() {
+    cbox.innerHTML = '';
+    [''].concat(cats).forEach(function (c) {
+      var p = document.createElement('span');
+      p.className = 'pill' + (c === catActiva ? ' on' : '');
+      p.textContent = c || 'Todos';
+      p.onclick = function () { catActiva = c; pintarCats(); pintar(); };
+      cbox.appendChild(p);
+    });
+  }
+
+  function pintar() {
+    var s = clave(document.getElementById('q').value.trim());
+    var cont = document.getElementById('lista');
+    var vacio = document.getElementById('vacio');
+    cont.innerHTML = '';
+    var n = 0;
+    DATA.forEach(function (d) {
+      if (catActiva && d.cat !== catActiva) return;
+      if (s && clave(d.t).indexOf(s) === -1 && clave(d.d).indexOf(s) === -1) return;
+      n++;
+      var card = document.createElement('div');
+      card.className = 'tpanel';
+      card.innerHTML = '<h2 style="margin-bottom:4px">' + esc(d.t) + '</h2>' +
+        (d.cat ? '<div class="thelp" style="margin-bottom:6px">' + esc(d.cat) + '</div>' : '') +
+        '<div>' + d.d + '</div>';
+      cont.appendChild(card);
+    });
+    document.getElementById('cuenta').textContent = n + ' de ' + DATA.length + ' términos';
+    vacio.style.display = n ? 'none' : '';
+    if (!n) vacio.textContent = 'Ningún término coincide con "' + document.getElementById('q').value + '".';
+  }
+
+  document.getElementById('q').addEventListener('input', pintar);
+  pintarCats();
+  pintar();
+})();
+</script>
+</body>
+</html>

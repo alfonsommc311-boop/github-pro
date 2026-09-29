@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Checklist · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Checklist de trabajo con método</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>🛡️ <span class="em">Checklist</span> de trabajo con método</h1>
+    <div class="lead">Antes de hacer commit, push, abrir o fusionar un pull request, publicar una release o hacer público un repositorio, pasa la lista. Los ítems <b>CRÍTICO</b> son los que, si fallan, cuestan horas o exponen una clave. Se guarda por lista en este dispositivo.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <h2>Elige la lista</h2>
+    <div class="field wide">
+      <label>Qué vas a hacer</label>
+      <select id="tipo"></select>
+    </div>
+    <div class="thelp" id="tdesc"></div>
+  </div>
+
+  <div class="tpanel">
+    <h2 id="ttitle"></h2>
+    <div id="items"></div>
+    <div id="verdict"></div>
+    <div class="btnrow">
+      <button class="btn ghost sm" type="button" id="exp">Copiar resultado</button>
+      <button class="btn ghost sm" type="button" id="reset">Desmarcar todo</button>
+    </div>
+    <div class="copied" id="aviso" style="display:none"></div>
+  </div>
+
+  <div class="warnbox">Un checklist completo no garantiza que un PR sea correcto ni que un despliegue funcione: acredita que trabajaste con método. Verifica los pasos que dependen de la interfaz de GitHub en docs.github.com.</div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+  <script src="assets/engine.js"></script>
+  <script src="assets/tools.js"></script>
+  <script>
+  (function () {
+    document.getElementById('nav').appendChild(Tools.nav('checklist.html'));
+    var esc = Tools.esc;
+
+    var LISTAS = [
+      { k: 'commit', t: 'Antes de hacer commit', d: 'Cada commit debe contar una sola cosa y no llevar nada prohibido.', items: [
+        { q: 'Leí git status y sé exactamente qué archivos entran', w: 'git add . sin mirar es la causa número uno de subir lo que no debía.', c: true },
+        { q: 'Ningún archivo de secretos entra (.env, key.properties, *.jks, tokens)', w: 'Lo que entra en un commit queda en la historia; una clave subida hay que revocarla.', c: true },
+        { q: 'No entran compilados ni dependencias (build/, node_modules/, .dart_tool/)', w: 'Pesan, cambian en cada build y no aportan; van en .gitignore.' },
+        { q: 'Revisé el diff (git diff --staged) y es lo que quería', w: 'Un commit a ciegas puede llevar un console.log, un TODO o un cambio a medias.' },
+        { q: 'El commit cuenta UNA sola cosa', w: 'Dos cambios en un commit impiden revertir uno sin el otro.' },
+        { q: 'El mensaje es imperativo y concreto (no "cambios", "fix", "asdf")', w: 'git log debe explicar el proyecto sin abrir los archivos.' },
+        { q: 'El proyecto sigue funcionando (validador, app, tests)', w: 'Un commit que rompe algo estorba a bisect y a quien haga checkout de él.' }
+      ] },
+      { k: 'push', t: 'Antes de hacer push', d: 'Lo que subes lo verán otros y no se puede "des-subir" con limpieza.', items: [
+        { q: 'Estoy en la rama correcta (git branch muestra * en la que espero)', w: 'Un push a main desde una rama de trabajo salta el PR y la revisión.', c: true },
+        { q: 'No voy a hacer push --force a una rama compartida', w: 'Sobrescribe commits ajenos. En rama propia rebasada, solo --force-with-lease.', c: true },
+        { q: 'Hice git fetch y sé si el remoto tiene commits nuevos', w: 'Evita el rechazo non-fast-forward y te obliga a integrar antes.' },
+        { q: 'Los commits que subo no incluyen historia que quería limpiar (WIP, pruebas)', w: 'Después del push, limpiar obliga a reescribir historia compartida.' },
+        { q: 'La rama tiene un nombre que explica la tarea (feature/, fix/, claude/)', w: 'Las ramas se comparten y se listan: "prueba2" no dice nada.' },
+        { q: 'Si es la primera vez, uso -u para fijar el upstream', w: 'Así los siguientes push y pull no necesitan argumentos.' }
+      ] },
+      { k: 'pr', t: 'Antes de abrir un pull request', d: 'Un PR pequeño y bien descrito se revisa en minutos; uno grande y mudo, nunca.', items: [
+        { q: 'El PR hace UNA cosa y es razonablemente pequeño', w: 'Los PR grandes se aprueban sin leer o se abandonan.', c: true },
+        { q: 'La descripción dice qué cambia, por qué y cómo probarlo', w: 'El revisor no debería reconstruir tu intención a partir del diff.', c: true },
+        { q: 'Enlacé el issue con Closes #n / Fixes #n si corresponde', w: 'Cierra el issue al fusionar y deja trazabilidad.' },
+        { q: 'Miré Files changed yo mismo antes de pedir revisión', w: 'Es la revisión más barata: encuentras archivos sobrantes y cambios accidentales.' },
+        { q: 'Los checks de CI están en verde (o expliqué por qué no)', w: 'Un PR en rojo no debería pedir revisión humana.' },
+        { q: 'Actualicé la rama con main si estaba muy atrasada', w: 'Evita conflictos de última hora al fusionar.' },
+        { q: 'Si no está listo, lo abrí como Draft', w: 'Evita que alguien lo fusione a medias.' },
+        { q: 'Asigné revisor, labels y proyecto', w: 'Sin revisor asignado, el PR no es de nadie.' }
+      ] },
+      { k: 'review', t: 'Antes de aprobar o fusionar un PR (incluidos los de Claude Code)', d: 'Aprobar es asumir el cambio como propio.', items: [
+        { q: 'Leí el diff COMPLETO en Files changed, no solo el resumen', w: 'Un asistente o un compañero pueden equivocarse con total confianza.', c: true },
+        { q: 'Busqué secretos, rutas locales y archivos que no deberían estar', w: 'Los PR automáticos pueden arrastrar archivos de trabajo.', c: true },
+        { q: 'Probé el cambio (bajé la rama, corrí la app o el validador)', w: 'El diff dice qué cambió; solo la ejecución dice si funciona.' },
+        { q: 'Los checks obligatorios están en verde y no hay conflictos', w: 'GitHub lo muestra en la cabecera del PR.' },
+        { q: 'Respondí o resolví todos los hilos de conversación', w: 'Un hilo abierto es una pregunta sin contestar.' },
+        { q: 'Elegí la estrategia de merge acordada (squash, merge, rebase)', w: 'Mezclarlas ensucia la historia de main.' },
+        { q: 'Borraré la rama al fusionar (o entiendo por qué no)', w: 'Las ramas fusionadas que quedan confunden a todos.' }
+      ] },
+      { k: 'release', t: 'Antes de publicar una release', d: 'Una release es una promesa: lo que descargue el usuario debe funcionar.', items: [
+        { q: 'La versión sigue SemVer y sube el número correcto (MAJOR/MINOR/PATCH)', w: 'Una versión mal numerada confunde a quien actualiza.', c: true },
+        { q: 'El tag apunta al commit correcto de main (git log -1 v1.2.0)', w: 'Un tag en la rama equivocada publica código no revisado.', c: true },
+        { q: 'El binario adjunto (APK) se construyó desde ese mismo commit', w: 'Un APK viejo con un tag nuevo es un bug difícil de rastrear.', c: true },
+        { q: 'Las notas listan qué cambió (generadas desde los PR y revisadas)', w: 'El usuario decide actualizar leyendo las notas.' },
+        { q: 'No adjunto claves ni archivos de firma; el binario no lleva secretos embebidos', w: 'Una release es pública y descargable por cualquiera.' },
+        { q: 'Actualicé README o CHANGELOG si cambió la instalación o el uso', w: 'La documentación desactualizada genera issues repetidos.' },
+        { q: 'Probé el binario descargado desde la release en un dispositivo limpio', w: 'Lo que funciona en tu máquina no siempre funciona desde cero.' }
+      ] },
+      { k: 'publico', t: 'Antes de hacer público un repositorio', d: 'Público significa indexado, clonable y copiado para siempre.', items: [
+        { q: 'Revisé TODA la historia en busca de secretos (git log -p | grep, secret scanning)', w: 'Un secreto en un commit antiguo queda expuesto al instante.', c: true },
+        { q: 'No hay datos personales ni de terceros (expedientes, fotos, correos)', w: 'La privacidad de otros no es tuya para publicar.', c: true },
+        { q: 'Hay LICENSE elegida a conciencia', w: 'Sin licencia, nadie puede reutilizar tu código legalmente aunque sea público.' },
+        { q: 'README explica qué es, cómo instalar y cómo contribuir', w: 'Es la portada del proyecto.' },
+        { q: 'main está protegida (PR obligatorio, checks, sin force push)', w: 'Un repo público recibe PR y forks; protege la rama principal.' },
+        { q: 'Dependabot y secret scanning están activados en Security', w: 'Detectan problemas antes que un desconocido.' },
+        { q: 'Plantillas de issue y PR en .github (opcional pero útil)', w: 'Ahorran preguntas repetidas.' }
+      ] },
+      { k: 'claude', t: 'Antes de pedirle un cambio a Claude Code', d: 'Un buen pedido produce un buen PR; uno vago, una tarde perdida.', items: [
+        { q: 'main está protegida y el asistente trabaja en rama propia (claude/...)', w: 'Así nada entra sin PR ni revisión.', c: true },
+        { q: 'No incluí secretos ni datos reales en el prompt', w: 'Lo que escribes puede acabar en un commit o un log.', c: true },
+        { q: 'CLAUDE.md tiene las reglas del proyecto (estructura, validador, qué no tocar)', w: 'El asistente las lee al empezar; ahorra correcciones.' },
+        { q: 'El pedido nombra archivos, criterio de aceptación y cómo validar', w: '"Mejora la app" no es un pedido; "añade 3 lecciones al área 4 y valida con scripts/validar.js" sí.' },
+        { q: 'Dije si quiero PR, solo commits o solo un plan', w: 'Evita PR sorpresa o trabajo sin registro.' },
+        { q: 'Reservé tiempo para revisar el diff yo mismo', w: 'La revisión humana es parte del flujo, no un extra.' }
+      ] }
+    ];
+
+    var sel = document.getElementById('tipo');
+    LISTAS.forEach(function (l) { var o = document.createElement('option'); o.value = l.k; o.textContent = l.t; sel.appendChild(o); });
+    var pedido = new URLSearchParams(location.search).get('lista');
+    if (pedido && LISTAS.some(function (l) { return l.k === pedido; })) sel.value = pedido;
+    var actual = null;
+
+    function estado() { return Store.get('chk:' + actual.k, {}); }
+    function pintar() {
+      actual = LISTAS.filter(function (l) { return l.k === sel.value; })[0];
+      document.getElementById('tdesc').textContent = actual.d;
+      document.getElementById('ttitle').textContent = actual.t;
+      var box = document.getElementById('items'); box.innerHTML = '';
+      var st = estado();
+      actual.items.forEach(function (it, i) {
+        var row = document.createElement('label');
+        row.className = 'chk' + (it.c ? ' crit' : '');
+        row.innerHTML = '<input type="checkbox" ' + (st[i] ? 'checked' : '') + '><div class="cx"><div class="cq">' + esc(it.q) + '</div><div class="cw">' + esc(it.w) + '</div></div>';
+        row.querySelector('input').onchange = function (e) { var s = estado(); s[i] = e.target.checked; Store.set('chk:' + actual.k, s); veredicto(); };
+        box.appendChild(row);
+      });
+      veredicto();
+    }
+    function veredicto() {
+      var st = estado(), tot = actual.items.length, ok = 0, critFalta = 0;
+      actual.items.forEach(function (it, i) { if (st[i]) ok++; else if (it.c) critFalta++; });
+      var v = document.getElementById('verdict'); v.innerHTML = '';
+      if (ok === tot) v.appendChild(Tools.verdict('ok', '✔ ' + ok + ' de ' + tot + '. Lista completa: adelante.'));
+      else if (critFalta) v.appendChild(Tools.verdict('bad', '✘ ' + ok + ' de ' + tot + '. Faltan ' + critFalta + ' ítem(s) CRÍTICO(S): no sigas hasta resolverlos.'));
+      else v.appendChild(Tools.verdict('warn', '⚠ ' + ok + ' de ' + tot + '. Los críticos están; revisa lo que falta.'));
+    }
+    sel.onchange = pintar;
+    document.getElementById('reset').onclick = function () { Store.set('chk:' + actual.k, {}); pintar(); };
+    document.getElementById('exp').onclick = function () {
+      var st = estado();
+      var txt = 'CHECKLIST: ' + actual.t + '\nProyecto: ' + Proyecto.v('repo', '(sin ficha)') + ' · ' + new Date().toLocaleDateString() + '\n\n' +
+        actual.items.map(function (it, i) { return (st[i] ? '[x] ' : '[ ] ') + it.q + (it.c ? ' (CRÍTICO)' : ''); }).join('\n');
+      Tools.copiar(txt, document.getElementById('aviso'));
+    };
+    pintar();
+  })();
+  </script>
+</body>
+</html>

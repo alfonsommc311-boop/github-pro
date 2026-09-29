@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Generador de .gitignore · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Generador de .gitignore</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>🚫 Generador de <span class="em">.gitignore</span></h1>
+    <div class="lead">Marca los tipos de proyecto y herramientas que usas y copia un <code>.gitignore</code> con lo que <b>jamás debe subirse</b>: compilados, dependencias, claves y archivos del sistema. Escríbelo <b>antes del primer</b> <code>git add</code>: lo que entra en un commit queda en la historia aunque lo borres después.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <h2>Tu proyecto</h2>
+    <div class="thelp">La ficha del proyecto preselecciona el tipo. Puedes combinar varios.</div>
+    <div class="rfilters" id="tipos"></div>
+    <div class="field wide" style="margin-top:10px"><label>Rutas propias a ignorar (una por línea, opcional)</label>
+      <textarea id="extra" placeholder="datos/privados/&#10;*.bak"></textarea>
+    </div>
+    <div class="btnrow"><button class="btn gold sm" type="button" id="gen">Generar .gitignore</button></div>
+  </div>
+
+  <div class="tpanel" id="salida" style="display:none">
+    <h2>.gitignore</h2>
+    <div id="out"></div>
+    <div class="hint">Guárdalo como <code>.gitignore</code> (con el punto, sin extensión) en la raíz del repositorio. Si un archivo ya fue rastreado, ignorarlo no basta: ejecuta <code>git rm --cached ruta</code> y haz commit. Si era una clave, <b>revócala</b>.</div>
+  </div>
+
+  <div class="tpanel">
+    <h2>Lo que nunca se sube, en cualquier proyecto</h2>
+    <table class="pl" style="min-width:0">
+      <tr><th>Qué</th><th>Por qué</th><th>Ejemplos</th></tr>
+      <tr><td>Claves y secretos</td><td>Quedan en la historia para siempre; hay que revocarlos</td><td><code>.env</code>, <code>key.properties</code>, <code>*.jks</code>, <code>*.pem</code>, <code>credentials.json</code></td></tr>
+      <tr><td>Compilados y artefactos</td><td>Se regeneran; pesan y cambian en cada build</td><td><code>build/</code>, <code>dist/</code>, <code>*.apk</code>, <code>*.exe</code></td></tr>
+      <tr><td>Dependencias descargadas</td><td>Las reinstala el gestor de paquetes desde el lockfile</td><td><code>node_modules/</code>, <code>.venv/</code>, <code>.dart_tool/</code></td></tr>
+      <tr><td>Archivos del sistema y del editor</td><td>Son personales y cambian por máquina</td><td><code>.DS_Store</code>, <code>Thumbs.db</code>, <code>.idea/</code>, <code>*.swp</code></td></tr>
+      <tr><td>Datos personales o de terceros</td><td>Privacidad y tamaño</td><td>Expedientes reales, bases de datos, fotos de obra</td></tr>
+    </table>
+  </div>
+
+  <div class="warnbox">Las plantillas de esta herramienta se basan en las recomendaciones habituales de cada ecosistema (ver el repositorio público github/gitignore). Cada proyecto tiene particularidades: revisa la salida antes de usarla y verifica en docs.github.com.</div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+<script src="assets/engine.js"></script>
+<script src="assets/tools.js"></script>
+<script>
+(function () {
+  document.getElementById('nav').appendChild(Tools.nav('gitignore.html'));
+
+  var TIPOS = [
+    { k: 'comun', t: '🧩 Común (siempre)', fijo: true, l: [
+      '# --- Secretos: nunca al repositorio (si ya subiste uno, revócalo) ---', '.env', '.env.*', '!.env.example', '*.pem', '*.key', 'credentials.json', 'secrets.json', '',
+      '# --- Sistema operativo y editores ---', '.DS_Store', 'Thumbs.db', 'desktop.ini', '.idea/', '.vscode/*', '!.vscode/settings.json', '!.vscode/extensions.json', '*.swp', '*~', '',
+      '# --- Registros y temporales ---', '*.log', '*.tmp', 'tmp/', 'temp/', '.cache/' ] },
+    { k: 'flutter', t: '📱 Flutter / Android', l: [
+      '# --- Flutter y Dart ---', '.dart_tool/', '.flutter-plugins', '.flutter-plugins-dependencies', '.packages', '.pub-cache/', '.pub/', 'build/', 'coverage/', '**/doc/api/', '',
+      '# --- Android: firma y locales (los .jks y key.properties son SECRETOS) ---', 'android/key.properties', '*.jks', '*.keystore', 'android/local.properties', 'android/.gradle/', 'android/app/debug/', 'android/app/profile/', 'android/app/release/', 'android/**/GeneratedPluginRegistrant.java', '',
+      '# --- Binarios: van en la release de GitHub, no en el repo ---', '*.apk', '*.aab', 'app.*.symbols', 'app.*.map.json', '',
+      '# --- iOS (por si acaso) ---', '**/ios/Flutter/.last_build_id', 'ios/Pods/', 'ios/.symlinks/' ] },
+    { k: 'python', t: '🐍 Python (MCP, scripts)', l: [
+      '# --- Python ---', '__pycache__/', '*.py[cod]', '*$py.class', '*.so', '.Python', 'build/', 'dist/', '*.egg-info/', '.eggs/', 'pip-log.txt', '',
+      '# --- Entornos virtuales ---', '.venv/', 'venv/', 'env/', 'ENV/', '',
+      '# --- Herramientas ---', '.pytest_cache/', '.mypy_cache/', '.ruff_cache/', '.coverage', 'htmlcov/', '.ipynb_checkpoints/', '',
+      '# --- Configuración local del servidor MCP ---', 'config.local.json', '*.local.json' ] },
+    { k: 'node', t: '🟢 Node / JavaScript', l: [
+      '# --- Node ---', 'node_modules/', 'npm-debug.log*', 'yarn-debug.log*', 'yarn-error.log*', '.npm/', '.pnpm-store/', '',
+      '# --- Compilados ---', 'dist/', 'build/', 'out/', '.next/', '.nuxt/', '.vite/', '.parcel-cache/', '',
+      '# --- Cobertura y pruebas ---', 'coverage/', '.nyc_output/' ] },
+    { k: 'web', t: '🌐 Web estático (HTML)', l: [
+      '# --- Sitio estático ---', '_site/', '.jekyll-cache/', '.sass-cache/', '*.map', '',
+      '# --- Capturas y borradores de trabajo ---', 'borradores/', 'capturas-temp/' ] },
+    { k: 'office', t: '📄 Office y CAD (temporales)', l: [
+      '# --- Temporales de Office ---', '~$*', '*.tmp', '',
+      '# --- Copias y bloqueos de CAD/GIS ---', '*.bak', '*.dwl', '*.dwl2', '*.sv$', '*.lock', '',
+      '# --- Datos pesados de proyecto (van en LFS o fuera del repo) ---', '*.dwg.bak', 'planos/export/' ] },
+    { k: 'claude', t: '✨ Claude Code (locales)', l: [
+      '# --- Configuración local del asistente (la del proyecto sí se versiona) ---', '.claude/settings.local.json', '.claude/*.local.*' ] }
+  ];
+
+  var sel = { comun: true };
+  var tipoFicha = (Proyecto.campo('tipo') || '').toLowerCase();
+  if (tipoFicha.indexOf('flutter') > -1) sel.flutter = true;
+  if (tipoFicha.indexOf('python') > -1) sel.python = true;
+  if (tipoFicha.indexOf('node') > -1) sel.node = true;
+  if (tipoFicha.indexOf('web') > -1) sel.web = true;
+
+  var box = document.getElementById('tipos');
+  function pintar() {
+    box.innerHTML = '';
+    TIPOS.forEach(function (t) {
+      var p = document.createElement('span');
+      p.className = 'pill' + (sel[t.k] ? ' on' : '');
+      p.textContent = t.t;
+      p.onclick = function () { if (t.fijo) return; sel[t.k] = !sel[t.k]; pintar(); };
+      box.appendChild(p);
+    });
+  }
+  pintar();
+
+  document.getElementById('gen').onclick = function () {
+    var lineas = ['# .gitignore de ' + Proyecto.v('repo', 'mi-proyecto') + ' (generado con GitHub PRO)', '# Revisa antes de usar. Lo ya rastreado se quita con: git rm --cached <ruta>', ''];
+    TIPOS.forEach(function (t) { if (sel[t.k]) { lineas = lineas.concat(t.l, ['']); } });
+    var extra = Tools.val('extra').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    if (extra.length) lineas = lineas.concat(['# --- Rutas propias ---'], extra, ['']);
+    var out = document.getElementById('out'); out.innerHTML = '';
+    Tools.bloque(out, lineas.join('\n').replace(/\n{3,}/g, '\n\n'));
+    document.getElementById('salida').style.display = '';
+    document.getElementById('salida').scrollIntoView({ behavior: 'smooth' });
+  };
+})();
+</script>
+</body>
+</html>

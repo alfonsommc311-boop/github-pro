@@ -1,65 +1,57 @@
-# GitHub Pro 🐙
+# GitHub PRO 🐙
 
-Aplicativo para **aprender Git y GitHub de cero a avanzado**: 7 módulos y 14 lecciones con teoría,
-quiz y práctica en una **terminal de Git simulada** en el navegador. Sin dependencias: HTML, CSS y
-JavaScript puros, listo para publicarse en GitHub Pages.
+App formativa Android (familia **Experto/PRO**: Flutter + WebView + TTS) para convertirte en **experto en Git y GitHub** aunque no seas programador de formación: cómo piensa Git por dentro, el ciclo diario de commits y ramas, pull requests y revisión de código, GitHub Actions, publicación con Pages y releases, seguridad del repositorio y el flujo de trabajo con **Claude Code**, Copilot y la CLI `gh`. Funciona sin internet.
 
-## Ejecutar en local
+## Qué trae
+
+- **12 áreas y 55 lecciones** con audio en todo (lección completa o por sección), ideas previas marcables, secciones con tablas y ejemplos, errores que cuestan horas, comandos y rutas clave, puntos clave, fichas de repaso y autoevaluación. Cierra con tres casos completos y un **examen integrador** de 20 preguntas.
+- **Terminal Git simulada** con 9 retos guiados que verifican el estado real del repositorio simulado (init, ciclo diario, ramas, merge, primer push, fork, deshacer, recuperar tras reset, etiquetar versión).
+- **Herramientas**: ficha del proyecto (rellena todas las plantillas), buscador de comandos (por lo que quieres hacer, con nivel de riesgo), generador de `.gitignore`, constructor de workflow de Actions (CI, Pages, release, APK, labeler), **SOS Git** (18 situaciones de "algo salió mal" con pasos), checklists (commit, push, PR, revisión, release, repo público, pedir a Claude Code), plantillas (README, PR, issues, commit, release, CODEOWNERS, CLAUDE.md, CONTRIBUTING, dependabot) y glosario con 80+ términos.
+
+## Ejecutar la versión web
+
+La app web vive en `assets/web/` y funciona sola en cualquier navegador (la voz usa `speechSynthesis` cuando no está el shell Flutter):
 
 ```bash
-python3 serve.py           # http://localhost:8080
-# o cualquier servidor estático:
-python3 -m http.server -d docs 8080
+python3 -m http.server 8080 -d assets/web
+# http://localhost:8080
 ```
 
-## Publicar en GitHub Pages
+También se publica en GitHub Pages con el workflow `.github/workflows/pages.yml` (Settings → Pages → Source: GitHub Actions).
 
-Settings → Pages → *Deploy from a branch* → rama `main`, carpeta `/docs`.
-La app quedará en `https://<usuario>.github.io/github-pro/`.
+## Construir el APK
 
-## Contenido
+Requiere Flutter (canal stable) y Java 17. Puerto del servidor local: **9048**; applicationId `com.alfonso.githubpro`.
 
-| Módulo | Lecciones |
-|---|---|
-| 1. Fundamentos | Qué son Git y GitHub · Instalar y configurar |
-| 2. Tu primer repositorio | init/add/commit · status, diff y .gitignore |
-| 3. Ramas y fusiones | Crear y cambiar de rama · merge, conflictos y rebase |
-| 4. Trabajar con GitHub | Crear repo y push · Fork, clone y open source |
-| 5. Pull Requests y revisión | PRs de principio a fin · Issues, Projects y Discussions |
-| 6. Automatización | GitHub Actions (CI/CD) · Pages, Releases y Packages |
-| 7. Git avanzado | Deshacer (reset, revert, reflog, stash) · Flujos y buenas prácticas |
+```bash
+flutter pub get
+dart run flutter_launcher_icons        # regenera los iconos desde assets/icon/
+dart run flutter_native_splash:create  # regenera el splash
+flutter build apk --release
+```
 
-Además: **glosario** con buscador, **chuleta de comandos** y **terminal libre** para practicar.
+## Validar el contenido
 
-## Características
+```bash
+node scripts/validar.js            # las 55 lecciones: sintaxis, campos, catálogo, tamaño, HTML permitido, quiz
+node scripts/validar.js <id>       # una lección
+node scripts/probar-web.js         # prueba de navegador (playwright-core + Chromium)
+```
 
-- Progreso, XP y racha diaria guardados en `localStorage` (por navegador).
-- Tema claro/oscuro.
-- Terminal simulada (`docs/js/gitsim.js`) que implementa: `init, clone, status, add, commit, log, diff,
-  branch, switch/checkout, merge, rebase, remote, push, pull, fetch, restore, reset, revert, stash,
-  tag, cherry-pick, reflog` y comandos de shell básicos (`ls, touch, echo >, cat, rm`).
-- Cada práctica valida tus comandos contra el estado real del simulador, no contra texto exacto.
+## Cómo se escribe una lección
+
+Cada lección es un archivo `assets/web/lessons/<id>.js` con una sola llamada `Lesson.start({...})` (formato exacto en `_brief/brief.md`, contenido obligatorio por lección en `_brief/anclas.md`). El catálogo está en `assets/web/assets/catalog.js`. La lección modelo es `init-add-y-commit.js`.
 
 ## Estructura
 
 ```
-docs/
-  index.html        # app
-  css/style.css
-  js/lessons.js     # contenido del curso (módulos, quizzes, prácticas, glosario, chuleta)
-  js/gitsim.js      # simulador de Git
-  js/app.js         # enrutado, progreso, quiz, terminal
-serve.py            # servidor local
-swarmcast/          # SwarmCast: simulador de predicción multiagente (proyecto anterior)
+assets/web/            app web (index, lesson, lessons/, assets/, herramientas)
+assets/web/assets/     engine.js (motor + TTS), catalog.js, tools.js, gitsim.js (simulador), glosario.js, styles.css
+lib/main.dart          shell Flutter: servidor local + WebView + TTS
+android/               proyecto Android
+scripts/               validar.js, probar-web.js
+_brief/                brief, anclas y lotes para los redactores
+.github/workflows/     ci.yml (valida lecciones), pages.yml (publica en Pages)
 ```
 
-Para añadir una lección basta con agregar un objeto en `docs/js/lessons.js` con `content` (HTML),
-`quiz` y opcionalmente `practice` con tareas `check(state, history)`.
-
----
-
-## SwarmCast (proyecto anterior)
-
-Motor de predicción por simulación multiagente inspirado en MiroFish. `python3 -m swarmcast.server`
-(http://localhost:8000) y `python3 -m unittest discover -s tests`. Opcional: `ANTHROPIC_API_KEY` u
-`OPENAI_API_KEY` para el informe y el chat con agentes.
+Los repositorios y personas de los ejemplos son ficticios. La interfaz de GitHub, sus planes y límites cambian: verifica en docs.github.com. La app no se conecta a GitHub, no llama a ninguna API y no guarda claves.

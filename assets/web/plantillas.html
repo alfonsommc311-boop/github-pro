@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Plantillas · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Plantillas listas para copiar</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>✍️ <span class="em">Plantillas</span> listas para copiar</h1>
+    <div class="lead">README, descripción de pull request, formulario de issue, mensaje de commit, notas de release, CODEOWNERS, CLAUDE.md y más, <b>rellenados con la ficha del proyecto</b>. Lo que falte aparece como COMPLETAR para que nada salga a medias.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <h2>Elige la plantilla</h2>
+    <div class="rfilters" id="tipos"></div>
+    <div class="thelp" id="tdesc"></div>
+  </div>
+
+  <div class="tpanel">
+    <h2 id="ttitle"></h2>
+    <div class="hint" id="truta"></div>
+    <div id="out"></div>
+  </div>
+
+  <div class="warnbox">Las plantillas son un punto de partida: adapta cada sección a tu proyecto y borra lo que no aplique. Los formatos que GitHub reconoce (plantillas de issue, CODEOWNERS, workflows) pueden cambiar: verifica en docs.github.com.</div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+<script src="assets/engine.js"></script>
+<script src="assets/tools.js"></script>
+<script>
+(function () {
+  document.getElementById('nav').appendChild(Tools.nav('plantillas.html'));
+  var P = function (k, alt) { return Proyecto.v(k, alt); };
+  var lic = function () { var l = Proyecto.campo('licencia') || 'MIT'; return l.indexOf('Sin') === 0 ? 'Todos los derechos reservados' : l; };
+
+  var T = [
+    { k: 'readme', t: '📄 README.md', ruta: 'README.md (raíz del repositorio)', d: 'La portada del proyecto: qué es, cómo instalar, cómo usar, cómo contribuir.', f: function () {
+      return '# ' + P('repo', 'nombre-del-proyecto') + '\n\n' + P('desc', 'Una frase que diga qué hace el proyecto y para quién.') + '\n\n' +
+        '![CI](' + Proyecto.url() + '/actions/workflows/ci.yml/badge.svg)\n\n' +
+        '## Qué hace\n\n- Punto 1\n- Punto 2\n- Punto 3\n\n' +
+        '## Capturas\n\n<!-- Una o dos imágenes en docs/img/ -->\n\n' +
+        '## Instalación\n\n```bash\ngit clone ' + Proyecto.url() + '.git\ncd ' + P('repo', 'repo') + '\n# pasos de instalación según el proyecto (flutter pub get, pip install -r requirements.txt, npm install)\n```\n\n' +
+        '## Uso\n\nExplica el caso de uso principal con un ejemplo corto.\n\n' +
+        '## Cómo se construye\n\nComandos para construir o validar (por ejemplo `flutter build apk --release` o `node scripts/validar.js`).\n\n' +
+        '## Contribuir\n\n1. Haz fork y crea una rama: `git switch -c feature/mi-cambio`\n2. Haz commits pequeños con mensajes claros\n3. Abre un pull request describiendo qué, por qué y cómo probar\n\n' +
+        '## Licencia\n\n' + lic() + '. Ver [LICENSE](LICENSE).\n\n---\nHecho por ' + P('autor', 'Autor') + '.\n';
+    } },
+    { k: 'pr', t: '🔀 Descripción de PR', ruta: '.github/pull_request_template.md (o pegar en la descripción del PR)', d: 'Qué, por qué, cómo probar y qué revisar.', f: function () {
+      return '## Qué cambia\n\n<!-- Una o dos frases. Ejemplo: Añade tres lecciones al área 4 y corrige el conteo del quiz. -->\n\n' +
+        '## Por qué\n\n<!-- El problema o la necesidad. Enlaza el issue: -->\nCloses #\n\n' +
+        '## Cómo probarlo\n\n1. Bajar la rama: `gh pr checkout <número>`\n2. Ejecutar: `node scripts/validar.js` (o el comando del proyecto)\n3. Abrir la app y comprobar ...\n\n' +
+        '## Capturas (si cambia la interfaz)\n\n' +
+        '## Checklist\n\n- [ ] El PR hace una sola cosa\n- [ ] Revisé Files changed yo mismo\n- [ ] Sin secretos ni archivos de trabajo\n- [ ] CI en verde\n- [ ] Documentación actualizada si hacía falta\n';
+    } },
+    { k: 'issue-bug', t: '🐞 Formulario de issue: bug', ruta: '.github/ISSUE_TEMPLATE/bug.yml', d: 'Formulario YAML que obliga a dar pasos, esperado, actual y entorno.', f: function () {
+      return 'name: Reporte de error\ndescription: Algo no funciona como debería\ntitle: "[Bug]: "\nlabels: ["bug"]\nbody:\n' +
+        '  - type: textarea\n    id: pasos\n    attributes:\n      label: Pasos para reproducir\n      description: Qué hiciste, en orden\n      placeholder: |\n        1. Abrir la lección ...\n        2. Tocar ...\n        3. Ver el error\n    validations:\n      required: true\n' +
+        '  - type: textarea\n    id: esperado\n    attributes:\n      label: Qué esperabas\n    validations:\n      required: true\n' +
+        '  - type: textarea\n    id: actual\n    attributes:\n      label: Qué pasó en realidad\n    validations:\n      required: true\n' +
+        '  - type: input\n    id: version\n    attributes:\n      label: Versión de la app\n      placeholder: v1.2.0\n    validations:\n      required: true\n' +
+        '  - type: dropdown\n    id: entorno\n    attributes:\n      label: Entorno\n      options:\n        - Android\n        - Windows\n        - Navegador\n        - Otro\n' +
+        '  - type: textarea\n    id: extra\n    attributes:\n      label: Capturas o registros\n';
+    } },
+    { k: 'issue-feature', t: '💡 Formulario de issue: mejora', ruta: '.github/ISSUE_TEMPLATE/mejora.yml', d: 'Para ideas y nuevas funciones.', f: function () {
+      return 'name: Propuesta de mejora\ndescription: Una idea o función nueva\ntitle: "[Mejora]: "\nlabels: ["enhancement"]\nbody:\n' +
+        '  - type: textarea\n    id: problema\n    attributes:\n      label: Qué problema resuelve\n    validations:\n      required: true\n' +
+        '  - type: textarea\n    id: propuesta\n    attributes:\n      label: Qué propones\n    validations:\n      required: true\n' +
+        '  - type: textarea\n    id: alternativas\n    attributes:\n      label: Alternativas que consideraste\n';
+    } },
+    { k: 'commit', t: '💬 Mensaje de commit', ruta: 'Al hacer git commit (sin -m, en el editor)', d: 'Convención Conventional Commits con cuerpo y pie.', f: function () {
+      return 'feat(quiz): corrige el conteo cuando no hay respuesta\n\n' +
+        'El puntaje sumaba una respuesta aunque el usuario no tocara ninguna opción.\n' +
+        'Ahora solo cuenta las preguntas contestadas y muestra el total al final.\n\n' +
+        'Closes #12\n\n' +
+        '# Tipos: feat, fix, docs, style, refactor, test, chore\n# Primera línea: imperativo, concreta, hasta ~50 caracteres\n# Línea en blanco y luego el porqué (no el qué: eso está en el diff)\n# Pie: Closes #n, Co-Authored-By: Nombre <correo>\n';
+    } },
+    { k: 'release', t: '🏷️ Notas de release', ruta: 'Pestaña Releases → Draft a new release (o gh release create)', d: 'Estructura de notas legibles para quien actualiza.', f: function () {
+      return '## ' + P('repo', 'proyecto') + ' v1.1.0\n\n' +
+        '### Novedades\n- Área 4 completa con cinco lecciones nuevas\n- Terminal simulada con retos guiados\n\n' +
+        '### Correcciones\n- El quiz ya no cuenta preguntas sin responder (#12)\n\n' +
+        '### Cambios que rompen compatibilidad\n- Ninguno\n\n' +
+        '### Cómo instalar\nDescarga el archivo adjunto (`app-release.apk`), ábrelo en el teléfono y acepta la instalación desde orígenes desconocidos si lo pide.\n\n' +
+        '**Cambios completos**: ' + Proyecto.url() + '/compare/v1.0.0...v1.1.0\n';
+    } },
+    { k: 'codeowners', t: '👥 CODEOWNERS', ruta: '.github/CODEOWNERS', d: 'Dueños por carpeta: revisores automáticos.', f: function () {
+      var u = '@' + P('usuario', 'usuario');
+      return '# Última regla que coincide gana. Los dueños se piden como revisores automáticamente.\n' +
+        '*                          ' + u + '\n' +
+        'assets/web/lessons/        ' + u + ' @rocio\n' +
+        '.github/workflows/         ' + u + '\n' +
+        'android/                   ' + u + '\n';
+    } },
+    { k: 'claude', t: '✨ CLAUDE.md', ruta: 'CLAUDE.md (raíz del repositorio)', d: 'Reglas del proyecto para Claude Code: estructura, validación, qué no tocar y cómo entregar.', f: function () {
+      return '# ' + P('repo', 'proyecto') + '\n\n' + P('desc', 'Qué es el proyecto en una frase.') + '\n\n' +
+        '## Reglas de este proyecto\n' +
+        '- Trabaja siempre en una rama `claude/<tarea>` y abre un pull request hacia `' + P('rama', 'main') + '`; nunca push directo a la rama principal.\n' +
+        '- Commits pequeños, un cambio lógico por commit, mensaje en imperativo (Conventional Commits).\n' +
+        '- Antes de dar por terminado: ejecutar el validador o los tests (`node scripts/validar.js`, `flutter analyze`, `pytest`) y dejar la salida en el PR.\n' +
+        '- No tocar sin pedirlo: archivos de firma, `android/`, configuración de despliegue.\n' +
+        '- Nunca escribir secretos, tokens ni rutas locales en el código ni en los commits.\n' +
+        '- Español con tildes en textos visibles; nombres de archivos en ASCII (sin tildes ni ñ).\n\n' +
+        '## Estructura\n- `assets/web/` app web (lecciones en `lessons/`, catálogo en `assets/catalog.js`)\n- `lib/` shell Flutter\n- `scripts/` validadores\n\n' +
+        '## Cómo validar\n```bash\nnode scripts/validar.js\n```\n\n' +
+        '## Al terminar\nResumen del cambio, comandos ejecutados y resultado; si algo no se pudo verificar, decirlo.\n';
+    } },
+    { k: 'contributing', t: '🤝 CONTRIBUTING.md', ruta: 'CONTRIBUTING.md', d: 'Cómo contribuir: flujo de ramas, estilo y revisión.', f: function () {
+      return '# Cómo contribuir a ' + P('repo', 'proyecto') + '\n\n' +
+        '1. Abre un issue antes de un cambio grande, para acordar el enfoque.\n' +
+        '2. Haz fork (o rama si tienes permisos): `git switch -c feature/descripcion`.\n' +
+        '3. Commits pequeños con mensajes en imperativo.\n' +
+        '4. Ejecuta las validaciones antes de abrir el PR.\n' +
+        '5. Abre el pull request con la plantilla: qué, por qué, cómo probar.\n' +
+        '6. Responde a la revisión; los mantenedores fusionan con squash.\n\n' +
+        '## Estilo\n- Español con tildes en textos; nombres de archivo en ASCII.\n- Sin secretos ni datos reales en ejemplos.\n\n' +
+        '## Código de conducta\nSé respetuoso. Ver CODE_OF_CONDUCT.md.\n';
+    } },
+    { k: 'dependabot', t: '🤖 dependabot.yml', ruta: '.github/dependabot.yml', d: 'Actualizaciones automáticas de dependencias y de las acciones de los workflows.', f: function () {
+      var tipo = (Proyecto.campo('tipo') || '').toLowerCase();
+      var eco = tipo.indexOf('flutter') > -1 ? 'pub' : tipo.indexOf('python') > -1 ? 'pip' : tipo.indexOf('node') > -1 ? 'npm' : 'npm';
+      return 'version: 2\nupdates:\n' +
+        '  - package-ecosystem: "github-actions"\n    directory: "/"\n    schedule:\n      interval: "monthly"\n' +
+        '  - package-ecosystem: "' + eco + '"\n    directory: "/"\n    schedule:\n      interval: "weekly"\n    open-pull-requests-limit: 5\n';
+    } }
+  ];
+
+  var actual = T[0];
+  var pedido = new URLSearchParams(location.search).get('p');
+  if (pedido) actual = T.filter(function (x) { return x.k === pedido; })[0] || T[0];
+  var box = document.getElementById('tipos');
+  function pintarTipos() {
+    box.innerHTML = '';
+    T.forEach(function (x) {
+      var p = document.createElement('span'); p.className = 'pill' + (x.k === actual.k ? ' on' : ''); p.textContent = x.t;
+      p.onclick = function () { actual = x; pintarTipos(); pintar(); };
+      box.appendChild(p);
+    });
+    document.getElementById('tdesc').textContent = actual.d;
+  }
+  function pintar() {
+    document.getElementById('ttitle').textContent = actual.t;
+    document.getElementById('truta').textContent = 'Dónde va: ' + actual.ruta;
+    var out = document.getElementById('out'); out.innerHTML = '';
+    Tools.bloque(out, actual.f());
+    if (Proyecto.completa().length) {
+      var n = document.createElement('div'); n.className = 'resnote';
+      n.textContent = 'Faltan datos en la ficha del proyecto (' + Proyecto.completa().join(', ') + '); aparecen como COMPLETAR. Llénala en Herramientas → Ficha.';
+      out.appendChild(n);
+    }
+  }
+  pintarTipos(); pintar();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Buscador de comandos · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Buscador de comandos</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>🔎 Buscador de <span class="em">comandos</span></h1>
+    <div class="lead">Escribe <b>lo que quieres hacer</b> ("deshacer el último commit", "subir una rama nueva", "ver quién cambió una línea") y obtén el comando exacto con su explicación y su riesgo. También puedes filtrar por categoría.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <div class="field wide"><label>¿Qué quieres hacer?</label>
+      <input type="search" id="q" placeholder="Ej. crear rama, resolver conflicto, recuperar commit, cambiar url del remoto, etiquetar versión...">
+    </div>
+    <div class="rfilters" id="cats"></div>
+    <div class="thelp" id="cuenta"></div>
+  </div>
+
+  <div id="lista"></div>
+  <div id="vacio" class="warnbox" style="display:none"></div>
+
+  <div class="warnbox">Los comandos marcados <b>⚠ reescribe historia</b> o <b>⚠ destructivo</b> pueden hacer perder trabajo o romper el trabajo de otros: úsalos solo en ramas propias y con un <code>git reflog</code> a mano. Verifica flags y comportamiento en la documentación de Git y en docs.github.com.</div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+<script src="assets/engine.js"></script>
+<script src="assets/tools.js"></script>
+<script>
+(function () {
+  document.getElementById('nav').appendChild(Tools.nav('comandos.html'));
+  var esc = Tools.esc, clave = Tools.clave;
+
+  /* {c: comando, q: qué hace (frases de búsqueda), cat, r: riesgo (0 seguro, 1 cuidado, 2 reescribe historia / destructivo), n: nota} */
+  var CMD = [
+    { cat: 'Configurar', c: 'git config --global user.name "Tu Nombre"', q: 'configurar nombre de autor identidad', n: 'Una sola vez por máquina. El correo debe coincidir con uno verificado en GitHub.' },
+    { cat: 'Configurar', c: 'git config --global user.email "tu@correo.com"', q: 'configurar correo email autor', n: 'Si no coincide con GitHub, los commits salen sin avatar ni atribución.' },
+    { cat: 'Configurar', c: 'git config --global init.defaultBranch main', q: 'rama por defecto main en vez de master', n: 'Afecta a los repos creados a partir de ahora.' },
+    { cat: 'Configurar', c: 'git config --list --show-origin', q: 'ver toda la configuracion y de donde viene', n: 'Muestra archivo global, del sistema y del repo.' },
+    { cat: 'Configurar', c: 'git config --global alias.lg "log --oneline --graph --all --decorate"', q: 'crear alias atajo comando', n: 'Luego basta con git lg.' },
+    { cat: 'Empezar', c: 'git init', q: 'crear repositorio nuevo en carpeta existente inicializar', n: 'Crea la carpeta .git; el repo nace vacío.' },
+    { cat: 'Empezar', c: 'git clone https://github.com/usuario/repo.git', q: 'clonar copiar repositorio remoto descargar', n: 'Copia toda la historia y deja configurado el remoto origin.' },
+    { cat: 'Empezar', c: 'git clone --depth 1 <url>', q: 'clonar rapido superficial solo ultimo commit', n: 'Clon superficial, útil en CI; no sirve para hacer push de historia completa.' },
+    { cat: 'Empezar', c: 'git status', q: 'ver estado archivos modificados preparados sin seguimiento', n: 'El comando que se usa antes de cualquier add o commit.' },
+    { cat: 'Cambios', c: 'git add <archivo>', q: 'preparar archivo stage añadir', n: 'Mete el archivo en el área de preparación.' },
+    { cat: 'Cambios', c: 'git add .', q: 'preparar todo agregar todos los cambios', n: 'Todo lo cambiado bajo la carpeta actual. Solo tras leer git status.' },
+    { cat: 'Cambios', c: 'git add -p', q: 'preparar por trozos partes parcial interactivo', n: 'Pregunta trozo a trozo: ideal cuando un archivo mezcla dos cambios.' },
+    { cat: 'Cambios', c: 'git commit -m "Mensaje en imperativo"', q: 'hacer commit guardar confirmar cambios', n: 'Guarda lo preparado como instantánea.' },
+    { cat: 'Cambios', c: 'git commit -am "Mensaje"', q: 'add y commit en un paso archivos rastreados', n: 'No incluye archivos nuevos: siguen necesitando git add.' },
+    { cat: 'Cambios', c: 'git commit --amend', q: 'corregir cambiar mensaje del ultimo commit añadir archivo olvidado', r: 2, n: 'Reescribe el último commit. Solo si no lo has subido; --no-edit conserva el mensaje.' },
+    { cat: 'Cambios', c: 'git diff', q: 'ver diferencias cambios sin preparar que cambie', n: 'Árbol de trabajo frente al área de preparación.' },
+    { cat: 'Cambios', c: 'git diff --staged', q: 'ver cambios preparados que entrara en el commit', n: 'Área de preparación frente al último commit.' },
+    { cat: 'Cambios', c: 'git restore <archivo>', q: 'descartar cambios de un archivo volver a la version del commit deshacer edicion', r: 2, n: 'Destructivo: los cambios sin commit se pierden.' },
+    { cat: 'Cambios', c: 'git restore --staged <archivo>', q: 'sacar del stage quitar de preparados unstage', n: 'No pierde nada: el archivo sigue modificado en el árbol.' },
+    { cat: 'Cambios', c: 'git rm --cached <archivo>', q: 'dejar de rastrear archivo sin borrarlo ignorar archivo ya subido', n: 'Lo quita del repo pero lo deja en disco; añádelo a .gitignore.' },
+    { cat: 'Cambios', c: 'git mv <viejo> <nuevo>', q: 'renombrar mover archivo', n: 'Renombra y prepara el cambio en un paso.' },
+    { cat: 'Cambios', c: 'git clean -n', q: 'ver archivos sin seguimiento que se borrarian limpiar', n: 'Simulación. Con -fd borra de verdad archivos y carpetas sin seguimiento.' },
+    { cat: 'Historia', c: 'git log --oneline', q: 'ver historia commits resumida', n: 'Una línea por commit: hash corto y mensaje.' },
+    { cat: 'Historia', c: 'git log --oneline --graph --all', q: 'ver arbol de ramas dibujo historia completa', n: 'Dibuja las ramas y sus fusiones en texto.' },
+    { cat: 'Historia', c: 'git log -p <archivo>', q: 'ver historia de un archivo con sus cambios', n: 'Muestra el diff de cada commit que tocó el archivo. Con --follow sigue renombrados.' },
+    { cat: 'Historia', c: 'git log -S "texto"', q: 'buscar commit que añadio o quito un texto pickaxe', n: 'Encuentra los commits donde cambió el número de apariciones de ese texto.' },
+    { cat: 'Historia', c: 'git show <hash>', q: 'ver contenido de un commit que cambio', n: 'Sin hash muestra el último commit.' },
+    { cat: 'Historia', c: 'git show <hash>:<ruta>', q: 'ver como estaba un archivo en un commit antiguo', n: 'Imprime esa versión del archivo sin cambiar nada.' },
+    { cat: 'Historia', c: 'git blame <archivo>', q: 'ver quien cambio cada linea autor por linea', n: 'Con -L 10,20 limita a un rango de líneas; -w ignora espacios.' },
+    { cat: 'Historia', c: 'git bisect start; git bisect bad; git bisect good <hash>', q: 'encontrar commit que rompio algo busqueda binaria bug', n: 'Git propone commits intermedios; marcas good o bad hasta aislar el culpable. git bisect reset al terminar.' },
+    { cat: 'Historia', c: 'git reflog', q: 'recuperar commit perdido ver movimientos de head historial de referencias', n: 'La red de seguridad: lista por dónde pasó HEAD aunque los commits ya no estén en ninguna rama.' },
+    { cat: 'Ramas', c: 'git branch', q: 'listar ramas ver ramas', n: 'Con -a incluye remotas; con -vv muestra el upstream de cada una.' },
+    { cat: 'Ramas', c: 'git switch -c <rama>', q: 'crear rama nueva y cambiar a ella', n: 'Equivalente clásico: git checkout -b <rama>.' },
+    { cat: 'Ramas', c: 'git switch <rama>', q: 'cambiar de rama moverse a otra rama', n: 'Equivalente clásico: git checkout <rama>. Exige árbol limpio si hay conflicto de archivos.' },
+    { cat: 'Ramas', c: 'git branch -m <nuevo-nombre>', q: 'renombrar rama actual', n: 'Con -M fuerza si el nombre existe. Para main en remoto hay que actualizar también GitHub.' },
+    { cat: 'Ramas', c: 'git branch -d <rama>', q: 'borrar rama ya fusionada eliminar', n: 'Se niega si la rama no está fusionada; -D fuerza (los commits quedan en reflog).' },
+    { cat: 'Ramas', c: 'git push origin --delete <rama>', q: 'borrar rama remota en github eliminar rama del servidor', r: 1, n: 'Elimina la rama en el remoto. GitHub también puede borrarla al fusionar el PR.' },
+    { cat: 'Ramas', c: 'git merge <rama>', q: 'fusionar rama integrar cambios de otra rama', n: 'Se ejecuta desde la rama destino. Fast-forward si no hubo divergencia; --no-ff fuerza commit de merge.' },
+    { cat: 'Ramas', c: 'git merge --abort', q: 'cancelar merge con conflictos volver atras', n: 'Devuelve el repo al estado anterior al merge.' },
+    { cat: 'Ramas', c: 'git rebase main', q: 'rebasar rama poner mis commits encima de main historia lineal', r: 2, n: 'Reescribe hashes. Solo en ramas propias no compartidas; luego push --force-with-lease.' },
+    { cat: 'Ramas', c: 'git rebase -i HEAD~5', q: 'rebase interactivo unir commits squash reordenar limpiar historia', r: 2, n: 'Abre un editor con pick/squash/fixup/reword/drop. Solo antes de compartir.' },
+    { cat: 'Ramas', c: 'git cherry-pick <hash>', q: 'traer copiar un commit de otra rama', n: 'Crea un commit nuevo con el mismo cambio en la rama actual.' },
+    { cat: 'Ramas', c: 'git stash', q: 'guardar cambios temporalmente sin commit cambiar de rama con trabajo a medias', n: 'Con -u incluye archivos sin seguimiento; -m "nota" le pone nombre.' },
+    { cat: 'Ramas', c: 'git stash pop', q: 'recuperar cambios guardados del stash', n: 'Aplica y elimina la entrada; apply la conserva; list muestra todas.' },
+    { cat: 'Ramas', c: 'git worktree add ../otra-carpeta <rama>', q: 'trabajar en dos ramas a la vez carpetas distintas revisar pr sin cambiar de rama', n: 'Segunda carpeta de trabajo del mismo repo. git worktree remove para quitarla.' },
+    { cat: 'Remotos', c: 'git remote add origin <url>', q: 'conectar repo local con github añadir remoto', n: 'Una sola vez. La URL sale de la página del repo (HTTPS o SSH).' },
+    { cat: 'Remotos', c: 'git remote -v', q: 'ver remotos url del remoto', n: 'Muestra fetch y push de cada remoto.' },
+    { cat: 'Remotos', c: 'git remote set-url origin <url>', q: 'cambiar url del remoto pasar de https a ssh', n: 'Útil al cambiar de HTTPS a SSH o al renombrar el repo en GitHub.' },
+    { cat: 'Remotos', c: 'git push -u origin <rama>', q: 'subir rama nueva por primera vez publicar rama', n: '-u fija el upstream; después basta con git push.' },
+    { cat: 'Remotos', c: 'git push', q: 'subir commits enviar cambios a github', n: 'Rechazado como non-fast-forward si el remoto tiene commits que no tienes: haz pull primero.' },
+    { cat: 'Remotos', c: 'git push --force-with-lease', q: 'forzar push de rama propia rebasada', r: 2, n: 'Se niega si el remoto cambió desde tu último fetch. Nunca sobre main ni ramas ajenas.' },
+    { cat: 'Remotos', c: 'git fetch', q: 'descargar cambios sin integrarlos ver que hay nuevo', n: 'Actualiza origin/* sin tocar tus ramas. Con --prune limpia ramas remotas borradas.' },
+    { cat: 'Remotos', c: 'git pull', q: 'bajar e integrar cambios del remoto actualizar', n: 'fetch + merge. Con --rebase evita commits de merge; con --ff-only se niega si divergió.' },
+    { cat: 'Remotos', c: 'git pull --rebase', q: 'actualizar rama poniendo mis commits encima sin commit de merge', r: 1, n: 'Reescribe tus commits locales no compartidos; ideal antes de push.' },
+    { cat: 'Remotos', c: 'git fetch upstream && git merge upstream/main', q: 'actualizar fork con el repositorio original sincronizar fork', n: 'Desde tu main local; luego git push a origin (tu fork).' },
+    { cat: 'Remotos', c: 'git pull --allow-unrelated-histories', q: 'historias no relacionadas repo creado con readme y proyecto local', r: 1, n: 'Cuando el repo de GitHub nació con README y el local con otra historia. Mejor evitarlo creando el repo vacío.' },
+    { cat: 'Deshacer', c: 'git revert <hash>', q: 'deshacer un commit ya subido de forma segura', n: 'Crea un commit inverso; no reescribe historia. Para un merge: -m 1.' },
+    { cat: 'Deshacer', c: 'git reset --soft HEAD~1', q: 'quitar el ultimo commit conservando los cambios preparados', r: 2, n: 'Los cambios quedan en el stage. Solo si no se ha subido.' },
+    { cat: 'Deshacer', c: 'git reset HEAD~1', q: 'quitar el ultimo commit dejando los cambios sin preparar', r: 2, n: 'Modo mixed (por defecto). Solo si no se ha subido.' },
+    { cat: 'Deshacer', c: 'git reset --hard HEAD~1', q: 'borrar el ultimo commit y sus cambios tirar todo', r: 2, n: 'Destructivo: los cambios sin commit se pierden; el commit queda en reflog un tiempo.' },
+    { cat: 'Deshacer', c: 'git reset --hard <hash-del-reflog>', q: 'recuperar commit tras reset hard volver a un estado anterior', r: 2, n: 'Localiza el hash con git reflog. Alternativa sin mover la rama: git branch rescate <hash>.' },
+    { cat: 'Deshacer', c: 'git checkout <hash>', q: 'ver el proyecto como estaba en un commit antiguo viajar en el tiempo', r: 1, n: 'Entras en detached HEAD; para volver, git switch main. Para conservar commits hechos allí, git switch -c rama.' },
+    { cat: 'Tags y releases', c: 'git tag -a v1.0.0 -m "Primera versión"', q: 'crear tag etiqueta version', n: 'Tag anotado (con autor y mensaje). Sin -a es un tag ligero.' },
+    { cat: 'Tags y releases', c: 'git push origin v1.0.0', q: 'subir tag a github publicar etiqueta', n: 'Los tags no se suben con git push normal; --tags sube todos.' },
+    { cat: 'Tags y releases', c: 'git tag -d v1.0.0 && git push origin --delete v1.0.0', q: 'borrar tag local y remoto', r: 1, n: 'Evita borrar tags de versiones ya publicadas: crea una versión nueva.' },
+    { cat: 'GitHub CLI', c: 'gh auth login', q: 'autenticarse iniciar sesion github cli token', n: 'Configura credenciales para gh y para git por HTTPS.' },
+    { cat: 'GitHub CLI', c: 'gh repo create <nombre> --public --source=. --push', q: 'crear repositorio en github desde la terminal y subir', n: 'Crea el repo, añade origin y hace push en un paso.' },
+    { cat: 'GitHub CLI', c: 'gh pr create --fill', q: 'abrir pull request desde terminal', n: 'Usa el mensaje del commit como título y descripción; --web abre el navegador.' },
+    { cat: 'GitHub CLI', c: 'gh pr checkout 12', q: 'bajar probar un pull request localmente revisar pr', n: 'Crea una rama local con el contenido del PR #12.' },
+    { cat: 'GitHub CLI', c: 'gh pr merge 12 --squash --delete-branch', q: 'fusionar pull request desde terminal squash', r: 1, n: 'Respeta las reglas de protección de rama: si faltan aprobaciones o checks, se niega.' },
+    { cat: 'GitHub CLI', c: 'gh release create v1.0.0 app.apk --generate-notes', q: 'crear release con apk adjunto notas automaticas', n: 'Crea el tag si no existe y adjunta el archivo.' },
+    { cat: 'GitHub CLI', c: 'gh run watch', q: 'ver ejecucion de actions en vivo seguir workflow', n: 'gh run list muestra las últimas; gh run view --log el detalle.' },
+    { cat: 'GitHub CLI', c: 'gh issue create --title "..." --body "..."', q: 'crear issue desde terminal', n: 'gh issue list para ver los abiertos.' }
+  ];
+
+  var cats = []; CMD.forEach(function (d) { if (cats.indexOf(d.cat) === -1) cats.push(d.cat); });
+  var catActiva = '';
+  var cbox = document.getElementById('cats');
+  function pintarCats() {
+    cbox.innerHTML = '';
+    [''].concat(cats).forEach(function (c) {
+      var p = document.createElement('span');
+      p.className = 'pill' + (c === catActiva ? ' on' : '');
+      p.textContent = c || 'Todos';
+      p.onclick = function () { catActiva = c; pintarCats(); pintar(); };
+      cbox.appendChild(p);
+    });
+  }
+  function riesgo(r) {
+    if (r === 2) return '<span class="badge" style="color:#ffc6cc;border-color:rgba(255,92,108,.45)">⚠ reescribe historia / destructivo</span>';
+    if (r === 1) return '<span class="badge" style="color:#ffe2ad;border-color:rgba(255,176,32,.45)">⚠ con cuidado</span>';
+    return '<span class="badge u">✔ seguro</span>';
+  }
+  function pintar() {
+    var s = clave(document.getElementById('q').value.trim());
+    var palabras = s.split(/\s+/).filter(Boolean);
+    var cont = document.getElementById('lista'), vacio = document.getElementById('vacio');
+    cont.innerHTML = '';
+    var n = 0;
+    CMD.forEach(function (d) {
+      if (catActiva && d.cat !== catActiva) return;
+      var texto = clave(d.c + ' ' + d.q + ' ' + d.n + ' ' + d.cat);
+      if (palabras.length && !palabras.every(function (w) { return texto.indexOf(w) > -1; })) return;
+      n++;
+      var card = document.createElement('div');
+      card.className = 'prob ' + (d.r === 2 ? 'alta' : d.r === 1 ? 'media' : 'baja');
+      card.innerHTML = '<div class="pt"><code>' + esc(d.c) + '</code></div>' +
+        '<div class="pe">' + esc(d.n) + '</div>' +
+        '<div class="pmeta"><span>' + esc(d.cat) + '</span>' + riesgo(d.r || 0) + '</div>';
+      var row = document.createElement('div'); row.className = 'btnrow';
+      var b = document.createElement('button'); b.className = 'btn ghost sm'; b.type = 'button'; b.textContent = 'Copiar';
+      var aviso = document.createElement('div'); aviso.className = 'copied'; aviso.style.display = 'none';
+      b.onclick = function () { Tools.copiar(d.c, aviso); };
+      row.appendChild(b); card.appendChild(row); card.appendChild(aviso);
+      cont.appendChild(card);
+    });
+    document.getElementById('cuenta').textContent = n + ' de ' + CMD.length + ' comandos';
+    vacio.style.display = n ? 'none' : '';
+    if (!n) vacio.textContent = 'Nada coincide con "' + document.getElementById('q').value + '". Prueba con otras palabras (por ejemplo "deshacer", "rama", "remoto") o consulta SOS Git.';
+  }
+  document.getElementById('q').addEventListener('input', pintar);
+  pintarCats(); pintar();
+})();
+</script>
+</body>
+</html>

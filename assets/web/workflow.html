@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Constructor de workflow · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Constructor de workflow de Actions</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>⚙️ Constructor de <span class="em">workflow</span></h1>
+    <div class="lead">Arma el YAML de <b>GitHub Actions</b> eligiendo qué quieres automatizar. La salida se guarda en <code>.github/workflows/&lt;nombre&gt;.yml</code>. Cada opción explica qué hace, para que el archivo no sea magia: lee el resultado línea a línea antes de subirlo.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <h2>1. ¿Qué quieres que haga?</h2>
+    <div class="rfilters" id="objetivo"></div>
+    <div class="thelp" id="odesc"></div>
+  </div>
+
+  <div class="tpanel">
+    <h2>2. Detalles</h2>
+    <div class="fgrid">
+      <div class="field"><label>Nombre del workflow</label><input id="nombre" type="text" placeholder="CI"></div>
+      <div class="field"><label>Rama principal</label><input id="rama" type="text" placeholder="main"></div>
+      <div class="field"><label>Cuándo se ejecuta</label>
+        <select id="cuando">
+          <option value="push_pr">En cada push a la rama principal y en cada pull request</option>
+          <option value="pr">Solo en pull requests</option>
+          <option value="push">Solo en push a la rama principal</option>
+          <option value="tag">Al crear un tag v* (versiones)</option>
+          <option value="manual">Solo a mano (workflow_dispatch)</option>
+          <option value="cron">Programado (todos los lunes a las 8:00 UTC)</option>
+        </select>
+      </div>
+      <div class="field"><label>Herramienta principal</label>
+        <select id="stack">
+          <option value="node">Node (validadores en JavaScript)</option>
+          <option value="python">Python</option>
+          <option value="flutter">Flutter (construir APK)</option>
+          <option value="ninguna">Ninguna (solo shell)</option>
+        </select>
+      </div>
+      <div class="field wide"><label>Comando de validación o construcción (una línea; opcional)</label><input id="cmd" type="text" placeholder="node scripts/validar.js"></div>
+      <div class="field"><label>Carpeta a publicar (solo Pages)</label><input id="carpeta" type="text" placeholder="assets/web"></div>
+      <div class="field"><label>Archivo a adjuntar (solo release)</label><input id="adjunto" type="text" placeholder="build/app/outputs/flutter-apk/app-release.apk"></div>
+    </div>
+    <div class="btnrow"><button class="btn gold sm" type="button" id="gen">Generar YAML</button></div>
+  </div>
+
+  <div class="tpanel" id="salida" style="display:none">
+    <h2 id="stitle">Workflow</h2>
+    <div id="out"></div>
+    <div id="notas"></div>
+  </div>
+
+  <div class="warnbox">Las acciones se fijan a versiones mayores (<code>@v4</code>, <code>@v5</code>) que pueden cambiar con el tiempo: comprueba la versión vigente en el Marketplace y la sintaxis en docs.github.com. Un workflow que construye o publica necesita los <b>permisos</b> mínimos indicados y, si firma un APK, la clave debe estar en <b>Secrets</b>, nunca en el repositorio.</div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+<script src="assets/engine.js"></script>
+<script src="assets/tools.js"></script>
+<script>
+(function () {
+  document.getElementById('nav').appendChild(Tools.nav('workflow.html'));
+  var OBJ = [
+    { k: 'ci', t: '🧪 CI: validar en cada cambio', d: 'Instala la herramienta, corre tu validador o tests y falla si algo no pasa. Con protección de rama, bloquea el merge del PR.' },
+    { k: 'pages', t: '🌐 Publicar en GitHub Pages', d: 'Sube una carpeta estática (por ejemplo assets/web) a Pages con actions/deploy-pages. Requiere elegir "GitHub Actions" como origen en Settings → Pages.' },
+    { k: 'release', t: '🏷️ Release con archivo adjunto', d: 'Al crear un tag v*, construye (opcional) y publica una release con el binario y notas generadas.' },
+    { k: 'apk', t: '📱 Construir APK de Flutter', d: 'Instala Java y Flutter, construye el APK y lo guarda como artefacto descargable de la ejecución.' },
+    { k: 'labels', t: '🏷️ Etiquetar PR por carpeta', d: 'Pone labels automáticamente según las rutas cambiadas (labeler). Ejemplo de automatización ligera.' }
+  ];
+  var obj = 'ci';
+  var box = document.getElementById('objetivo');
+  function pintarObj() {
+    box.innerHTML = '';
+    OBJ.forEach(function (o) {
+      var p = document.createElement('span'); p.className = 'pill' + (o.k === obj ? ' on' : ''); p.textContent = o.t;
+      p.onclick = function () { obj = o.k; pintarObj(); ajustar(); };
+      box.appendChild(p);
+    });
+    document.getElementById('odesc').textContent = OBJ.filter(function (o) { return o.k === obj; })[0].d;
+  }
+  function ajustar() {
+    var n = document.getElementById('nombre'), c = document.getElementById('cuando'), s = document.getElementById('stack');
+    if (obj === 'ci') { n.placeholder = 'CI'; c.value = 'push_pr'; }
+    if (obj === 'pages') { n.placeholder = 'Publicar en Pages'; c.value = 'push'; }
+    if (obj === 'release') { n.placeholder = 'Release'; c.value = 'tag'; }
+    if (obj === 'apk') { n.placeholder = 'Construir APK'; c.value = 'manual'; s.value = 'flutter'; }
+    if (obj === 'labels') { n.placeholder = 'Etiquetar PR'; c.value = 'pr'; s.value = 'ninguna'; }
+  }
+  pintarObj(); ajustar();
+  document.getElementById('rama').value = Proyecto.campo('rama') || '';
+  var tipo = (Proyecto.campo('tipo') || '').toLowerCase();
+  if (tipo.indexOf('flutter') > -1) document.getElementById('stack').value = 'flutter';
+  if (tipo.indexOf('python') > -1) document.getElementById('stack').value = 'python';
+
+  function on(cuando, rama) {
+    if (cuando === 'push_pr') return 'on:\n  push:\n    branches: [' + rama + ']\n  pull_request:\n    branches: [' + rama + ']\n';
+    if (cuando === 'pr') return 'on:\n  pull_request:\n    branches: [' + rama + ']\n';
+    if (cuando === 'push') return 'on:\n  push:\n    branches: [' + rama + ']\n  workflow_dispatch:\n';
+    if (cuando === 'tag') return 'on:\n  push:\n    tags: ["v*"]\n';
+    if (cuando === 'cron') return 'on:\n  schedule:\n    - cron: "0 8 * * 1"   # lunes 8:00 UTC\n  workflow_dispatch:\n';
+    return 'on:\n  workflow_dispatch:\n';
+  }
+  function setup(stack) {
+    if (stack === 'node') return '      - name: Instalar Node\n        uses: actions/setup-node@v4\n        with:\n          node-version: 20\n';
+    if (stack === 'python') return '      - name: Instalar Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: "3.12"\n      - name: Instalar dependencias\n        run: |\n          python -m pip install --upgrade pip\n          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi\n';
+    if (stack === 'flutter') return '      - name: Instalar Java\n        uses: actions/setup-java@v4\n        with:\n          distribution: temurin\n          java-version: 17\n      - name: Instalar Flutter\n        uses: subosito/flutter-action@v2\n        with:\n          channel: stable\n      - name: Dependencias\n        run: flutter pub get\n';
+    return '';
+  }
+  document.getElementById('gen').onclick = function () {
+    var nombre = Tools.val('nombre') || document.getElementById('nombre').placeholder;
+    var rama = Tools.val('rama') || 'main';
+    var cuando = document.getElementById('cuando').value;
+    var stack = document.getElementById('stack').value;
+    var cmd = Tools.val('cmd');
+    var carpeta = Tools.val('carpeta') || 'assets/web';
+    var adjunto = Tools.val('adjunto');
+    var y = 'name: ' + nombre + '\n\n' + on(cuando, rama) + '\n';
+    var notas = [];
+    if (obj === 'ci') {
+      y += 'jobs:\n  validar:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Descargar el código\n        uses: actions/checkout@v4\n' + setup(stack) +
+        '      - name: Validar\n        run: ' + (cmd || (stack === 'flutter' ? 'flutter analyze && flutter test' : stack === 'python' ? 'python -m pytest' : 'node scripts/validar.js')) + '\n';
+      notas.push('Guárdalo en .github/workflows/ci.yml. Luego, en Settings → Branches, marca el job "validar" como required status check para que ningún PR se fusione en rojo.');
+    }
+    if (obj === 'pages') {
+      y += 'permissions:\n  contents: read\n  pages: write\n  id-token: write\n\nconcurrency:\n  group: pages\n  cancel-in-progress: true\n\njobs:\n  publicar:\n    runs-on: ubuntu-latest\n    environment:\n      name: github-pages\n      url: ${{ steps.deploy.outputs.page_url }}\n    steps:\n      - name: Descargar el código\n        uses: actions/checkout@v4\n' +
+        (cmd ? setup(stack) + '      - name: Construir\n        run: ' + cmd + '\n' : '') +
+        '      - name: Configurar Pages\n        uses: actions/configure-pages@v5\n      - name: Empaquetar la carpeta\n        uses: actions/upload-pages-artifact@v3\n        with:\n          path: ' + carpeta + '\n      - name: Publicar\n        id: deploy\n        uses: actions/deploy-pages@v4\n';
+      notas.push('En Settings → Pages elige "GitHub Actions" como origen (Source). La URL será https://' + (Proyecto.campo('usuario') || 'usuario').toLowerCase() + '.github.io/' + (Proyecto.campo('repo') || 'repo') + '/. Usa rutas relativas en el HTML.');
+    }
+    if (obj === 'release') {
+      y += 'permissions:\n  contents: write\n\njobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Descargar el código\n        uses: actions/checkout@v4\n' +
+        (cmd ? setup(stack) + '      - name: Construir\n        run: ' + cmd + '\n' : '') +
+        '      - name: Crear la release con notas automáticas\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n        run: |\n          gh release create "${{ github.ref_name }}" ' + (adjunto ? '"' + adjunto + '" ' : '') + '--generate-notes --title "${{ github.ref_name }}"\n';
+      notas.push('Se dispara con: git tag -a v1.0.0 -m "Versión 1.0.0" && git push origin v1.0.0. El token GITHUB_TOKEN ya existe; solo necesita el permiso contents: write.');
+      if (stack === 'flutter') notas.push('Para un APK firmado, guarda el keystore en base64 y sus contraseñas como Secrets y decodifícalo en un paso previo; nunca subas key.properties ni el .jks al repositorio.');
+    }
+    if (obj === 'apk') {
+      y += 'jobs:\n  apk:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Descargar el código\n        uses: actions/checkout@v4\n' + setup('flutter') +
+        '      - name: Construir APK (release sin firma propia)\n        run: ' + (cmd || 'flutter build apk --release') + '\n      - name: Guardar el APK como artefacto\n        uses: actions/upload-artifact@v4\n        with:\n          name: app-release\n          path: build/app/outputs/flutter-apk/app-release.apk\n';
+      notas.push('El artefacto se descarga desde la pestaña Actions → la ejecución → Artifacts, y caduca según el plan. Para publicarlo de forma permanente, adjúntalo a una release.');
+      notas.push('Firma: guarda el keystore en base64 (base64 -w0 clave.jks) como secreto KEYSTORE_B64 y las contraseñas como secretos; añade un paso que lo decodifique a android/app/ y genere key.properties antes de construir.');
+    }
+    if (obj === 'labels') {
+      y += 'permissions:\n  contents: read\n  pull-requests: write\n\njobs:\n  etiquetar:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/labeler@v5\n        with:\n          repo-token: ${{ secrets.GITHUB_TOKEN }}\n';
+      notas.push('Necesita un archivo .github/labeler.yml con reglas, por ejemplo:\nlecciones:\n  - changed-files:\n      - any-glob-to-any-file: "assets/web/lessons/**"\nherramientas:\n  - changed-files:\n      - any-glob-to-any-file: "assets/web/*.html"');
+    }
+    var out = document.getElementById('out'); out.innerHTML = '';
+    var archivo = '.github/workflows/' + nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.yml';
+    document.getElementById('stitle').textContent = archivo;
+    Tools.bloque(out, y);
+    var nb = document.getElementById('notas'); nb.innerHTML = '';
+    notas.forEach(function (n) { var d = document.createElement('div'); d.className = 'resnote'; d.style.whiteSpace = 'pre-wrap'; d.textContent = '• ' + n; nb.appendChild(d); });
+    document.getElementById('salida').style.display = '';
+    document.getElementById('salida').scrollIntoView({ behavior: 'smooth' });
+  };
+})();
+</script>
+</body>
+</html>

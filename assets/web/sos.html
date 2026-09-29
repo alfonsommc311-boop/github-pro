@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SOS Git · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">SOS Git: algo salió mal</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>🆘 SOS <span class="em">Git</span></h1>
+    <div class="lead">Algo salió mal y no sabes qué hacer. <b>Primero: no ejecutes nada con --force ni --hard hasta leer esto.</b> Elige el síntoma y sigue los pasos en orden. Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <div class="field wide"><label>¿Qué pasó?</label>
+      <input type="search" id="q" placeholder="Ej. push rechazado, commit en la rama equivocada, subí una clave, conflicto, borré una rama...">
+    </div>
+    <div class="rfilters" id="cats"></div>
+    <div class="thelp" id="cuenta"></div>
+  </div>
+
+  <div id="lista"></div>
+  <div id="vacio" class="warnbox" style="display:none"></div>
+
+  <div class="warnbox">Antes de cualquier remedio: <code>git status</code> para saber dónde estás y <code>git reflog</code> para tener a mano los hashes recientes. Si el repositorio es compartido, avisa antes de reescribir historia. Verifica los comandos en la documentación de Git y en docs.github.com.</div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+<script src="assets/engine.js"></script>
+<script src="assets/tools.js"></script>
+<script>
+(function () {
+  document.getElementById('nav').appendChild(Tools.nav('sos.html'));
+  var esc = Tools.esc, clave = Tools.clave;
+
+  /* {t: síntoma, cat, g: gravedad (alta/media/baja), causa, pasos: [..], evitar} */
+  var SOS = [
+    { t: 'El push fue rechazado: "rejected ... non-fast-forward"', cat: 'Remoto', g: 'baja', causa: 'Alguien (o tú desde otra máquina, o Claude Code) subió commits a esa rama antes que tú. El remoto tiene historia que tu copia no tiene.',
+      pasos: ['git fetch origin', 'git log --oneline HEAD..origin/<rama>   (qué hay en el remoto que tú no tienes)', 'git pull --rebase   (o git pull si prefieres un commit de merge)', 'Si aparecen conflictos: resuélvelos, git add y git rebase --continue', 'git push'],
+      evitar: 'Nunca lo arregles con git push --force en una rama compartida: borrarías los commits del otro.' },
+    { t: 'Hice commit en la rama equivocada (por ejemplo en main)', cat: 'Ramas', g: 'baja', causa: 'Olvidaste crear o cambiar de rama antes de confirmar. Los commits están bien; solo están colgados del puntero equivocado.',
+      pasos: ['git log --oneline -3   (anota cuántos commits sobran)', 'git switch -c feature/lo-que-sea   (crea la rama correcta desde aquí; se lleva los commits)', 'git switch main', 'git reset --hard origin/main   (si main ya estaba subida) o git reset --hard HEAD~N (N commits sobrantes, solo si no los subiste)', 'git switch feature/lo-que-sea y sigue trabajando'],
+      evitar: 'Si ya hiciste push de esos commits a main, no uses reset: haz git revert de cada uno y trabaja en la rama nueva.' },
+    { t: 'Hice git reset --hard y perdí un commit (o varios)', cat: 'Deshacer', g: 'media', causa: 'reset --hard movió la rama hacia atrás y descartó el árbol. Los commits siguen en la base de datos de Git durante semanas.',
+      pasos: ['git reflog   (busca la línea anterior al reset: "commit: ..." con su hash)', 'git branch rescate <hash>   (crea una rama en ese punto sin mover nada más)', 'git log --oneline rescate   (comprueba que es lo que buscabas)', 'git switch main && git merge rescate   (o git reset --hard <hash> si quieres volver exactamente allí)'],
+      evitar: 'Los cambios que nunca llegaron a un commit (ni a un stash) no se recuperan con Git: usa la papelera del editor o su historial local.' },
+    { t: 'Borré una rama con -D y tenía trabajo', cat: 'Ramas', g: 'media', causa: 'Borrar la rama solo borra el puntero; sus commits siguen ahí hasta que Git limpie objetos huérfanos.',
+      pasos: ['git reflog   (busca "checkout: moving from <rama>" o el último commit de esa rama)', 'git branch <rama> <hash>', 'git log --oneline <rama>   (verifica)'],
+      evitar: 'Usa -d en vez de -D: se niega a borrar ramas no fusionadas.' },
+    { t: 'Subí una clave, un token o una contraseña al repositorio', cat: 'Seguridad', g: 'alta', causa: 'Un archivo con secretos (.env, key.properties, credentials.json) entró en un commit y llegó a GitHub. Aunque el repo sea privado, cualquiera con acceso (o un fork, o un clon) ya lo tiene.',
+      pasos: ['REVOCA el secreto en el proveedor (genera uno nuevo). Esto es lo primero y lo único que de verdad protege.', 'Añade la ruta a .gitignore y quítala del rastreo: git rm --cached <archivo> && git commit -m "Deja de rastrear secretos"', 'Si el repo es tuyo y nadie lo ha clonado, puedes limpiar la historia con una herramienta como git filter-repo y push --force-with-lease; avisa a los colaboradores porque cambia todos los hashes.', 'Revisa Security → Secret scanning en GitHub y activa push protection.'],
+      evitar: 'Borrar el archivo en un commit posterior NO lo elimina: sigue en la historia. Hacer el repo privado tampoco.' },
+    { t: 'Tengo un conflicto de merge y no sé qué hacer', cat: 'Ramas', g: 'baja', causa: 'Dos ramas cambiaron las mismas líneas. Git dejó los marcadores en el archivo y espera tu decisión.',
+      pasos: ['git status   (lista "both modified": esos son los archivos a resolver)', 'Abre cada archivo: entre <<<<<<< HEAD y ======= está lo tuyo; entre ======= y >>>>>>> lo que llega. Deja la versión correcta y borra los tres marcadores.', 'Prueba que el proyecto funciona (un validador, la app)', 'git add <archivo> por cada uno resuelto', 'git commit   (o git merge --continue)'],
+      evitar: 'Si te asustas: git merge --abort vuelve todo al estado anterior. Nunca subas un archivo con marcadores.' },
+    { t: 'No puedo cambiar de rama: "Your local changes would be overwritten"', cat: 'Ramas', g: 'baja', causa: 'Tienes cambios sin commit en archivos que difieren entre las dos ramas; Git no los arrastra para no destruirlos.',
+      pasos: ['Opción A (guardar y seguir): git stash, git switch <rama>, y cuando vuelvas git stash pop', 'Opción B (confirmar): git add . && git commit -m "WIP: trabajo a medias" y luego cambia de rama', 'Opción C (descartar, si de verdad no los quieres): git restore . (irreversible)'],
+      evitar: 'No uses git checkout -f sin saber qué cambios estás tirando.' },
+    { t: 'Hice commit con el mensaje equivocado o me olvidé de un archivo', cat: 'Deshacer', g: 'baja', causa: 'El último commit está incompleto o mal descrito. Si aún no lo subiste, se corrige en el sitio.',
+      pasos: ['Si falta un archivo: git add <archivo>', 'git commit --amend   (abre el editor para el mensaje) o git commit --amend --no-edit (conserva el mensaje)', 'Si YA lo subiste a una rama compartida: no uses amend; haz un commit nuevo ("Añade el archivo que faltaba")'],
+      evitar: 'amend reescribe el commit (hash nuevo); en ramas compartidas obliga a force push.' },
+    { t: 'Git me pide usuario y contraseña y la contraseña no funciona', cat: 'Remoto', g: 'baja', causa: 'GitHub no acepta la contraseña de la cuenta por HTTPS: hace falta un token personal o SSH.',
+      pasos: ['Opción A: crea un Personal Access Token (Settings → Developer settings) y úsalo como contraseña; Git Credential Manager lo guardará', 'Opción B: configura SSH (ssh-keygen -t ed25519, clave pública en Settings → SSH and GPG keys) y cambia la URL: git remote set-url origin git@github.com:usuario/repo.git', 'Opción C: gh auth login y deja que la CLI configure las credenciales'],
+      evitar: 'No pegues el token en ningún archivo del repo ni en un script.' },
+    { t: 'El repo de GitHub nació con README y mi push falla: "unrelated histories"', cat: 'Remoto', g: 'baja', causa: 'El repo remoto tiene un commit inicial (README, licencia) y el local otro distinto: dos historias sin antepasado común.',
+      pasos: ['git pull origin main --allow-unrelated-histories', 'Resuelve el conflicto del README si lo hay, git add, git commit', 'git push -u origin main'],
+      evitar: 'La próxima vez crea el repo en GitHub vacío (sin README) cuando ya tengas historia local.' },
+    { t: 'Estoy en "detached HEAD" y no entiendo qué pasó', cat: 'Ramas', g: 'baja', causa: 'Hiciste checkout de un commit o de un tag y HEAD apunta a un commit suelto, no a una rama. Es solo un modo de mirar.',
+      pasos: ['Si no hiciste commits allí: git switch main (o la rama que quieras) y listo', 'Si hiciste commits y quieres conservarlos: git switch -c rama-nueva (se lleva los commits)', 'Si ya saliste y perdiste los commits: git reflog y git branch rescate <hash>'],
+      evitar: 'No hagas commits "importantes" en detached HEAD sin crear una rama.' },
+    { t: 'Hice git pull y ahora hay un commit de merge que no quería', cat: 'Remoto', g: 'baja', causa: 'pull hizo fetch + merge porque tu rama y la remota habían divergido. No es un error, pero ensucia la historia.',
+      pasos: ['Si todavía no hiciste push del merge: git reset --hard ORIG_HEAD (vuelve a antes del pull) y luego git pull --rebase', 'Para siempre: git config --global pull.rebase true'],
+      evitar: 'Con historia ya compartida, deja el commit de merge: es inocuo.' },
+    { t: 'Un archivo aparece siempre como modificado aunque no lo toqué (finales de línea)', cat: 'Configurar', g: 'baja', causa: 'Windows usa CRLF y otros sistemas LF; Git convierte según core.autocrlf y cree que cambió todo el archivo.',
+      pasos: ['En Windows: git config --global core.autocrlf true (convierte al hacer checkout y commit)', 'Mejor a nivel de repo: crea .gitattributes con la línea "* text=auto" y haz commit', 'git add --renormalize . && git commit -m "Normaliza finales de línea"'],
+      evitar: 'No mezcles editores con distinta configuración sin .gitattributes.' },
+    { t: 'Actions falla con "Resource not accessible by integration" o permiso denegado', cat: 'Actions', g: 'baja', causa: 'El GITHUB_TOKEN del workflow no tiene el permiso que el paso necesita (crear release, comentar PR, publicar Pages).',
+      pasos: ['Añade un bloque permissions al workflow o al job con lo mínimo: contents: write (releases), pull-requests: write (comentar), pages: write e id-token: write (Pages), packages: write (paquetes)', 'Revisa Settings → Actions → General → Workflow permissions', 'En PR desde forks, los secretos no están disponibles por seguridad: es esperado'],
+      evitar: 'No des permissions: write-all por comodidad.' },
+    { t: 'Actions falla porque no encuentra mis archivos', cat: 'Actions', g: 'baja', causa: 'El runner empieza vacío: sin actions/checkout no hay código.',
+      pasos: ['Añade como primer paso: - uses: actions/checkout@v4', 'Si usas submódulos: with: submodules: true', 'Comprueba la carpeta de trabajo con un paso run: ls -la'],
+      evitar: 'No asumas nada instalado en el runner: cada herramienta necesita su setup.' },
+    { t: 'Claude Code (o alguien) hizo push a main directamente y no pasó por PR', cat: 'Colaboración', g: 'media', causa: 'La rama main no estaba protegida; cualquier push válido entra.',
+      pasos: ['Revisa el commit: git log -1 -p (o Files changed en la web). Si está bien, déjalo.', 'Si no debía entrar: git revert <hash> y push (no reset en main compartida)', 'Protege main: Settings → Branches → Add rule: require a pull request, required status checks, block force pushes, include administrators'],
+      evitar: 'Indica en CLAUDE.md que el asistente trabaje en ramas claude/ y abra PR; la protección de rama lo hace obligatorio.' },
+    { t: 'Quiero deshacer un commit que ya está en GitHub y otros lo tienen', cat: 'Deshacer', g: 'baja', causa: 'La historia ya es compartida: reescribirla rompería las copias de los demás.',
+      pasos: ['git revert <hash>   (crea un commit inverso)', 'Si es un commit de merge: git revert -m 1 <hash>', 'git push'],
+      evitar: 'reset + push --force en una rama compartida obliga a todos a reparar sus clones.' },
+    { t: 'El repositorio pesa demasiado o el push falla por un archivo grande', cat: 'Remoto', g: 'media', causa: 'Entró un binario grande (APK, video, base de datos) en la historia. GitHub rechaza archivos por encima de cierto tamaño (verificar el límite vigente).',
+      pasos: ['Si el archivo está solo en el último commit sin subir: git rm --cached <archivo>, añádelo a .gitignore y git commit --amend', 'Si ya está en commits anteriores: hay que reescribir la historia con git filter-repo (avisar a todos) o empezar a usar Git LFS para ese tipo de archivo', 'Publica binarios en Releases, no en el repo'],
+      evitar: 'Un .gitignore con build/, *.apk y datos/ antes del primer commit evita todo esto.' },
+    { t: 'Hice stash y ahora no encuentro mis cambios', cat: 'Deshacer', g: 'baja', causa: 'El stash es una pila aparte; los cambios no están en el árbol hasta que los apliques.',
+      pasos: ['git stash list   (verás stash@{0}, stash@{1}...)', 'git stash show -p stash@{0}   (mira qué contiene)', 'git stash pop   (aplica y elimina la última) o git stash apply stash@{1}'],
+      evitar: 'Ponles nombre: git stash push -m "quiz a medias".' }
+  ];
+
+  var cats = []; SOS.forEach(function (d) { if (cats.indexOf(d.cat) === -1) cats.push(d.cat); });
+  var catActiva = '';
+  var cbox = document.getElementById('cats');
+  function pintarCats() {
+    cbox.innerHTML = '';
+    [''].concat(cats).forEach(function (c) {
+      var p = document.createElement('span'); p.className = 'pill' + (c === catActiva ? ' on' : ''); p.textContent = c || 'Todos';
+      p.onclick = function () { catActiva = c; pintarCats(); pintar(); };
+      cbox.appendChild(p);
+    });
+  }
+  function pintar() {
+    var s = clave(document.getElementById('q').value.trim());
+    var palabras = s.split(/\s+/).filter(Boolean);
+    var cont = document.getElementById('lista'), vacio = document.getElementById('vacio');
+    cont.innerHTML = '';
+    var n = 0;
+    SOS.forEach(function (d) {
+      if (catActiva && d.cat !== catActiva) return;
+      var texto = clave(d.t + ' ' + d.causa + ' ' + d.pasos.join(' ') + ' ' + d.cat);
+      if (palabras.length && !palabras.every(function (w) { return texto.indexOf(w) > -1; })) return;
+      n++;
+      var card = document.createElement('div');
+      card.className = 'risk ' + d.g;
+      card.innerHTML = '<div class="rt">' + esc(d.t) + '</div>' +
+        '<div class="rm"><b>Qué pasó:</b> ' + esc(d.causa) + '</div>' +
+        '<div class="rm" style="margin-top:8px"><b>Pasos:</b></div>' +
+        '<ol style="margin:4px 0 0;padding-left:20px">' + d.pasos.map(function (p) {
+          var m = p.match(/^([^\s(]+(?:\s+[^\s(]+)*?)(\s{2,}\(|\s+\(|$)/);
+          return '<li style="margin:5px 0;font-size:13.5px">' + (/^git |^gh |^ssh|^base64/.test(p) ? '<code>' + esc(p.split(/\s{2,}\(|\s{3}/)[0]) + '</code>' + esc(p.indexOf('   ') > -1 ? ' ' + p.split('   ').slice(1).join(' ') : '') : esc(p)) + '</li>';
+        }).join('') + '</ol>' +
+        '<div class="rm" style="margin-top:8px;color:#ffe2ad"><b>Evita:</b> ' + esc(d.evitar) + '</div>' +
+        '<div class="rroles"><span class="rrole">' + esc(d.cat) + '</span><span class="rrole ' + (d.g === 'alta' ? 'hit' : '') + '">gravedad ' + d.g + '</span></div>';
+      cont.appendChild(card);
+    });
+    document.getElementById('cuenta').textContent = n + ' de ' + SOS.length + ' situaciones';
+    vacio.style.display = n ? 'none' : '';
+    if (!n) vacio.textContent = 'Ninguna situación coincide con "' + document.getElementById('q').value + '". Prueba con otras palabras o revisa el Buscador de comandos.';
+  }
+  document.getElementById('q').addEventListener('input', pintar);
+  pintarCats(); pintar();
+})();
+</script>
+</body>
+</html>

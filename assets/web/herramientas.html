@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ficha del proyecto · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Herramientas de GitHub</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>🧰 Ficha del <span class="em">proyecto</span></h1>
+    <div class="lead">Llena estos datos <b>una sola vez</b>. Las plantillas (README, PR, issue, release), el generador de .gitignore, el constructor de workflow y el checklist los usarán automáticamente para que cada texto salga con tu usuario, tu repo y tu licencia correctos.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <h2>Datos del proyecto</h2>
+    <div class="thelp">Se guardan solo en este dispositivo. La app no se conecta a GitHub ni envía nada a ningún servidor.</div>
+    <div id="form"></div>
+  </div>
+
+  <div class="tpanel" id="estado"></div>
+
+  <div class="tpanel">
+    <h2>Herramientas</h2>
+    <div class="thelp">Nueve utilidades para trabajar con Git y GitHub con método, sin internet.</div>
+    <div id="hub"></div>
+  </div>
+
+  <div class="warnbox">
+    Las herramientas <b>ayudan a trabajar con método; no reemplazan la documentación oficial</b>. La interfaz web de GitHub, sus planes y sus límites cambian: ante la duda, verifica en docs.github.com. Ningún generador conoce las particularidades de tu proyecto: revisa siempre lo que copies antes de usarlo.
+  </div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+  <script src="assets/engine.js"></script>
+  <script src="assets/tools.js"></script>
+  <script>
+    (function () {
+      document.getElementById('nav').appendChild(Tools.nav('herramientas.html'));
+
+      var estado = document.getElementById('estado');
+      function pintarEstado() {
+        var faltan = Proyecto.completa();
+        estado.innerHTML = '<h2>Estado de la ficha</h2>';
+        var v;
+        if (!faltan.length) {
+          v = Tools.verdict('ok', '✔ Ficha completa. Las plantillas y generadores saldrán con todos los datos rellenados.');
+        } else if (faltan.length <= 3) {
+          v = Tools.verdict('warn', '⚠ Faltan ' + faltan.length + ' datos: ' + faltan.join(', ') + '. Las plantillas los marcarán como COMPLETAR.');
+        } else {
+          v = Tools.verdict('bad', '✘ Ficha incompleta (' + faltan.length + ' datos pendientes). Complétala antes de generar textos.');
+        }
+        estado.appendChild(v);
+        var o = Proyecto.get();
+        if (o.usuario && o.repo) {
+          var res = document.createElement('div');
+          res.className = 'res';
+          res.innerHTML =
+            '<div class="resrow"><span>URL del repositorio</span><b>' + Tools.esc(Proyecto.url()) + '</b></div>' +
+            '<div class="resrow"><span>URL de clonado (HTTPS)</span><b>' + Tools.esc(Proyecto.url() + '.git') + '</b></div>' +
+            '<div class="resrow"><span>URL de clonado (SSH)</span><b>' + Tools.esc('git@github.com:' + o.usuario + '/' + o.repo + '.git') + '</b></div>' +
+            '<div class="resrow"><span>GitHub Pages (si se activa)</span><b>' + Tools.esc('https://' + o.usuario.toLowerCase() + '.github.io/' + o.repo + '/') + '</b></div>';
+          estado.appendChild(res);
+          var n = document.createElement('div');
+          n.className = 'resnote';
+          n.textContent = 'Las URL se calculan con la convención habitual de GitHub; la de Pages depende de que la actives en Settings → Pages. Verifica en docs.github.com.';
+          estado.appendChild(n);
+        }
+      }
+
+      Proyecto.formulario(document.getElementById('form'), pintarEstado);
+      pintarEstado();
+
+      var hub = [
+        { h: 'terminal.html', i: '⌨️', t: 'Terminal Git simulada', d: 'Practica init, add, commit, ramas, merge, remotos, stash, reset y revert sin riesgo, con retos guiados que verifican tu trabajo.' },
+        { h: 'comandos.html', i: '🔎', t: 'Buscador de comandos', d: 'Escribe lo que quieres hacer ("deshacer el último commit", "subir una rama") y obtén el comando con su explicación.' },
+        { h: 'gitignore.html', i: '🚫', t: 'Generador de .gitignore', d: 'Elige tu tipo de proyecto (Flutter, Python, Node, web) y copia un .gitignore con lo que jamás debe subirse.' },
+        { h: 'workflow.html', i: '⚙️', t: 'Constructor de workflow de Actions', d: 'Arma el YAML de CI, Pages o release paso a paso, con secretos y permisos correctos.' },
+        { h: 'sos.html', i: '🆘', t: 'SOS Git', d: 'Algo salió mal: elige el síntoma y sigue los pasos para salir sin perder trabajo.' },
+        { h: 'checklist.html', i: '🛡️', t: 'Checklist', d: 'Antes de hacer commit, push, abrir un PR, fusionar, publicar una release o hacer público un repo.' },
+        { h: 'plantillas.html', i: '✍️', t: 'Plantillas', d: 'README, descripción de PR, formulario de issue, mensaje de commit, notas de release y CLAUDE.md, listos para copiar.' },
+        { h: 'glosario.html', i: '📖', t: 'Glosario', d: 'Términos de Git y GitHub en lenguaje llano.' }
+      ];
+      var g = document.getElementById('hub');
+      hub.forEach(function (x) {
+        var a = document.createElement('a');
+        a.className = 'card';
+        a.href = x.h;
+        a.style.marginTop = '10px';
+        a.style.setProperty('--acc', 'var(--tool)');
+        a.innerHTML = '<div class="ico">' + x.i + '</div><div class="ct">' + Tools.esc(x.t) +
+          '</div><div class="cd">' + Tools.esc(x.d) + '</div><div class="go">Abrir →</div>';
+        g.appendChild(a);
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GitHub PRO · De cero a experto en Git y GitHub</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="head">
+    <h1>🐙 GitHub <span class="em">PRO</span></h1>
+    <div class="lead">Conviértete en <b>experto en Git y GitHub</b> aunque no seas programador de formación: entiende <b>qué pasa por debajo</b> de cada commit, trabaja con <b>ramas</b> sin miedo, colabora con <b>pull requests</b> y revisión de código, automatiza con <b>GitHub Actions</b>, publica con <b>Pages y releases</b>, protege tus <b>claves y tu cuenta</b>, y domina el flujo de trabajo con <b>Claude Code</b>, Copilot y la CLI. Con <b>terminal Git simulada</b>, buscador de comandos, generadores, checklists, plantillas, fichas de memoria, autoevaluación y <b>audio en todo</b>. Funciona sin internet.</div>
+    <div class="chips">
+      <span class="chip">🐙 Git y GitHub completos</span>
+      <span class="chip">🔊 Audio en todo</span>
+      <span class="chip">🧪 Autoevaluación por lección</span>
+      <span class="chip">⌨️ Terminal simulada</span>
+      <span class="chip">📡 Sin internet</span>
+      <span class="chip" id="chip-count">📚 lecciones</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+      <div class="progress-txt" id="ptxt">Tu progreso</div>
+    </div>
+  </div>
+
+  <nav class="toolbar" id="tools" aria-label="Herramientas"></nav>
+
+  <div class="search"><input id="q" type="search" placeholder="🔎 Buscar tema (commit, rama, merge, conflicto, pull request, Actions, Pages, release, token, reflog…)"></div>
+
+  <nav class="toc" id="toc" aria-label="Indice de areas"></nav>
+
+  <div id="home"></div>
+
+  <div class="foot">
+    🎧 <b>Cómo usarla:</b> estudia cada área en orden, toca <b>Escuchar lección completa</b> y repasa con audio. Cada lección trae ejemplos con tus propios proyectos (una app formativa, un servidor MCP, un sitio web), <b>errores que cuestan horas</b> y un quiz. Practica los comandos en la <b>Terminal</b> de esta app antes de tocar un repositorio real.<br>
+    🧭 <b>Orden recomendado:</b> fundamentos → primer repositorio → ramas → remotos → pull requests → issues y projects → Actions → publicar → Git avanzado → seguridad → Claude Code, Copilot y CLI → casos y examen.<br>
+    🛠️ <b>Herramientas:</b> <b>terminal Git simulada</b> con retos, <b>buscador de comandos</b>, <b>generador de .gitignore</b>, <b>constructor de workflow</b> de Actions, <b>SOS Git</b> (qué hacer cuando algo salió mal), checklists, plantillas y glosario.<br>
+    ⚠️ Esta app es formativa. Los repositorios y personas de los ejemplos son ficticios. La interfaz web de GitHub, sus planes y sus límites cambian: ante la duda, verifica en la documentación oficial (docs.github.com). Esta app no se conecta a GitHub, no llama a ninguna API y no guarda claves.<br>
+    GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.
+  </div>
+
+  <script src="assets/catalog.js"></script>
+  <script src="assets/engine.js"></script>
+  <script src="assets/tools.js"></script>
+  <script>
+    (function () {
+      var tb = document.getElementById('tools');
+      Tools.paginas.forEach(function (x) {
+        var a = document.createElement('a');
+        a.href = x.href; a.textContent = x.t;
+        tb.appendChild(a);
+      });
+
+      var home = document.getElementById('home');
+      var toc = document.getElementById('toc');
+      var total = 0;
+      CATALOG.forEach(function (a) { total += a.lessons.length; });
+      document.getElementById('chip-count').textContent = '📚 ' + total + ' lecciones';
+
+      var read = Store.get('read', {});
+      var nread = Object.keys(read).filter(function (k) { return read[k]; }).length;
+      var pc = total ? Math.round(nread / total * 100) : 0;
+      document.getElementById('pfill').style.width = pc + '%';
+      document.getElementById('ptxt').textContent = 'Tu progreso · ' + nread + ' de ' + total + ' lecciones (' + pc + '%)';
+
+      CATALOG.forEach(function (a, ai) {
+        if (toc) {
+          var tlink = document.createElement('a');
+          tlink.href = '#area-' + ai;
+          tlink.textContent = a.icon + ' ' + a.area;
+          toc.appendChild(tlink);
+        }
+        var sec = document.createElement('div');
+        sec.className = 'section';
+        sec.id = 'area-' + ai;
+        sec.innerHTML = '<div class="t">' + a.icon + ' ' + a.area + '</div><div class="sdesc">' + a.desc + '</div>';
+        home.appendChild(sec);
+
+        var grid = document.createElement('div');
+        grid.className = 'grid';
+        a.lessons.forEach(function (l) {
+          var done = read[l.id];
+          var card = document.createElement('a');
+          card.className = 'card';
+          card.href = 'lesson.html?l=' + l.id;
+          card.style.setProperty('--acc', 'var(--' + a.acc + ')');
+          card.innerHTML =
+            '<div class="ico">' + l.icon + '</div>' +
+            (done ? '<span class="done">✓ leída</span>' : '') +
+            '<div class="ct">' + l.t + '</div>' +
+            '<div class="cd">' + l.d + '</div>' +
+            '<div class="go">Aprender →</div>';
+          grid.appendChild(card);
+        });
+        home.appendChild(grid);
+      });
+
+      var q = document.getElementById('q');
+      q.addEventListener('input', function () {
+        var s = q.value.toLowerCase().trim();
+        if (toc) toc.style.display = s ? 'none' : '';
+        document.querySelectorAll('a.card').forEach(function (c) {
+          c.style.display = (!s || c.textContent.toLowerCase().indexOf(s) >= 0) ? '' : 'none';
+        });
+        document.querySelectorAll('.section').forEach(function (sec) {
+          var grid = sec.nextElementSibling;
+          var any = [].some.call(grid.querySelectorAll('a.card'), function (c) { return c.style.display !== 'none'; });
+          sec.style.display = any ? '' : 'none';
+          grid.style.display = any ? '' : 'none';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Terminal Git simulada · GitHub PRO</title>
+<meta name="theme-color" content="#0d1118">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← Inicio</a>
+    <div class="tt">Terminal Git simulada</div>
+  </div>
+
+  <div class="head" style="padding-top:6px">
+    <h1>⌨️ Terminal Git <span class="em">simulada</span></h1>
+    <div class="lead">Practica los comandos de Git <b>sin riesgo</b>: aquí no hay repositorio real ni internet. El simulador entiende un subconjunto de Git (repos, stage, commits, ramas, merge, remotos, push y pull, stash, tags, reset y revert) y cada <b>reto</b> verifica el estado real del repositorio simulado, no el texto que escribes. Escribe <code>help</code> para ver los comandos.</div>
+  </div>
+
+  <div id="nav"></div>
+
+  <div class="tpanel">
+    <h2>Retos guiados</h2>
+    <div class="thelp">Elige un reto: las tareas se marcan solas cuando el estado del repositorio las cumple. El botón ↺ reinicia el simulador.</div>
+    <div class="reto-list" id="retos"></div>
+    <div id="tasks" style="margin-top:10px"></div>
+  </div>
+
+  <div class="tpanel">
+    <h2 id="ttitle">Terminal</h2>
+    <div class="term" id="term"></div>
+    <div class="term-input">
+      <input id="term-in" placeholder="$ git status" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button class="btn ghost sm" type="button" id="term-run">↵</button>
+      <button class="btn ghost sm" type="button" id="term-reset" title="Reiniciar simulador">↺</button>
+    </div>
+    <div class="state-view" id="state-view"></div>
+  </div>
+
+  <div class="warnbox">El simulador es didáctico: no reproduce todos los mensajes ni todos los casos de Git real (por ejemplo, los conflictos se resuelven automáticamente y push/pull no hablan con ningún servidor). Cuando pases a un repositorio real, verifica cada comando en la documentación de Git y en docs.github.com.</div>
+
+  <div class="foot">GitHub PRO v1.0 · Casi nada se pierde en Git; lo que se pierde es la calma.</div>
+
+  <script src="assets/engine.js"></script>
+  <script src="assets/tools.js"></script>
+  <script src="assets/gitsim.js"></script>
+  <script>
+  (function () {
+    document.getElementById('nav').appendChild(Tools.nav('terminal.html'));
+    var esc = Tools.esc;
+
+    /* Retos: cada tarea tiene check(state, history). Una tarea cumplida se conserva aunque el estado cambie después. */
+    var RETOS = [
+      { id: 'primer-repo', t: '📦 Primer repositorio', intro: 'Crea el repositorio de metrados-pro y haz dos commits.',
+        tasks: [
+          { text: 'Inicializa un repositorio con git init', check: function (s) { return s.initialized; } },
+          { text: 'Crea README.md (echo "# metrados-pro" > README.md)', check: function (s) { return s.files.indexOf('README.md') > -1; } },
+          { text: 'Prepáralo con git add', check: function (s) { return s.initialized && (s.staged.indexOf('README.md') > -1 || s.commits > 0); } },
+          { text: 'Haz el primer commit con mensaje (git commit -m "...")', check: function (s) { return s.commits >= 1; } },
+          { text: 'Crea .gitignore con build/ (echo "build/" > .gitignore) y haz un segundo commit', check: function (s) { return s.commits >= 2 && s.files.indexOf('.gitignore') > -1; } },
+          { text: 'Mira la historia con git log --oneline', check: function (s, h) { return s.commits >= 1 && h.some(function (c) { return /^git log/.test(c); }); } }
+        ] },
+      { id: 'ciclo-diario', t: '🔍 Ciclo diario', intro: 'Modifica, revisa con status y diff, prepara y confirma.',
+        tasks: [
+          { text: 'Repo con app.js confirmado en un commit', check: function (s) { return s.commits >= 1 && s.files.indexOf('app.js') > -1; } },
+          { text: 'Modifica app.js (echo "console.log(1)" >> app.js) y revisa con git status', check: function (s, h) { return s.modified.indexOf('app.js') > -1 && h.some(function (c) { return /^git status/.test(c); }); } },
+          { text: 'Mira el cambio con git diff', check: function (s, h) { return h.some(function (c) { return /^git diff/.test(c); }); } },
+          { text: 'Prepara y revisa lo preparado con git diff --staged', check: function (s, h) { return h.some(function (c) { return /^git diff --(staged|cached)/.test(c); }); } },
+          { text: 'Haz el commit', check: function (s, h) { return s.commits >= 2; } }
+        ] },
+      { id: 'rama', t: '🌿 Rama de funcionalidad', intro: 'Trabaja en una rama y vuelve a main.',
+        tasks: [
+          { text: 'Repo con un commit inicial', check: function (s) { return s.commits >= 1; } },
+          { text: 'Crea y cambia a feature/login (git switch -c feature/login)', check: function (s) { return s.branches.indexOf('feature/login') > -1; } },
+          { text: 'En feature/login crea login.js y haz commit', check: function (s) { return s.branch === 'feature/login' && s.commits >= 2 && s.files.indexOf('login.js') > -1; } },
+          { text: 'Vuelve a main (git switch main)', check: function (s, h) { return s.branches.indexOf('feature/login') > -1 && s.branch === 'main' && h.some(function (c) { return /^git (switch|checkout) main/.test(c); }); } },
+          { text: 'Lista las ramas con git branch', check: function (s, h) { return h.some(function (c) { return /^git branch$/.test(c.trim()); }); } }
+        ] },
+      { id: 'merge', t: '🔗 Fusionar una rama', intro: 'Fusiona feature/nav en main y borra la rama.',
+        tasks: [
+          { text: 'Repo con commit inicial y rama feature/nav con un commit propio', check: function (s) { return s.branches.indexOf('feature/nav') > -1 && s.commits >= 2; } },
+          { text: 'Desde main, ejecuta git merge feature/nav', check: function (s, h) { return s.branch === 'main' && h.some(function (c) { return /^git merge feature\/nav/.test(c); }); } },
+          { text: 'Borra la rama fusionada con git branch -d feature/nav', check: function (s, h) { return h.some(function (c) { return /^git merge feature\/nav/.test(c); }) && s.branches.indexOf('feature/nav') === -1; } },
+          { text: 'Mira el resultado con git log --oneline', check: function (s, h) { return h.some(function (c) { return /^git log/.test(c); }); } }
+        ] },
+      { id: 'remoto', t: '☁️ Primer push', intro: 'Conecta el repo con GitHub y sube tu trabajo.',
+        tasks: [
+          { text: 'Repo local con al menos un commit', check: function (s) { return s.commits >= 1; } },
+          { text: 'Añade el remoto: git remote add origin https://github.com/tu-usuario/metrados-pro.git', check: function (s) { return s.remotes.indexOf('origin') > -1; } },
+          { text: 'Verifica con git remote -v', check: function (s, h) { return h.some(function (c) { return /^git remote -v/.test(c); }); } },
+          { text: 'Sube la rama con git push -u origin main', check: function (s) { return s.remoteBranches.indexOf('origin/main') > -1; } },
+          { text: 'Haz otro commit y súbelo con git push (sin argumentos)', check: function (s, h) { return s.commits >= 2 && h.some(function (c) { return c.trim() === 'git push'; }); } }
+        ] },
+      { id: 'fork', t: '🍴 Flujo de fork', intro: 'Clona tu fork, añade upstream y sube una rama de arreglo.',
+        tasks: [
+          { text: 'Clona: git clone https://github.com/tu-usuario/mcp-utils.git', check: function (s) { return s.initialized && s.remotes.indexOf('origin') > -1 && s.commits >= 1; } },
+          { text: 'Añade el original: git remote add upstream https://github.com/comunidad/mcp-utils.git', check: function (s) { return s.remotes.indexOf('upstream') > -1; } },
+          { text: 'Crea la rama fix/encoding, haz un commit y súbela con git push -u origin fix/encoding', check: function (s) { return s.remoteBranches.indexOf('origin/fix/encoding') > -1; } }
+        ] },
+      { id: 'deshacer', t: '⏪ Deshacer con seguridad', intro: 'Revierte un commit y usa stash.',
+        tasks: [
+          { text: 'Repo con dos commits', check: function (s) { return s.commits >= 2; } },
+          { text: 'Revierte el último con git revert HEAD', check: function (s, h) { return h.some(function (c) { return /^git revert/.test(c); }) && s.commits >= 3; } },
+          { text: 'Modifica un archivo rastreado y guárdalo con git stash', check: function (s, h) { return h.some(function (c) { return /^git stash( push| save)?$/.test(c.trim()); }); } },
+          { text: 'Recupéralo con git stash pop', check: function (s, h) { return h.some(function (c) { return /^git stash pop/.test(c); }); } },
+          { text: 'Mira el reflog con git reflog', check: function (s, h) { return h.some(function (c) { return /^git reflog/.test(c); }); } }
+        ] },
+      { id: 'reset', t: '🆘 Recuperar tras un reset', intro: 'Pierde un commit con reset --hard y recupéralo con reflog.',
+        tasks: [
+          { text: 'Repo con tres commits', check: function (s) { return s.commits >= 3; } },
+          { text: 'Ejecuta git reset --hard HEAD~1 (pierdes el último)', check: function (s, h) { return h.some(function (c) { return /^git reset --hard HEAD~1/.test(c); }); } },
+          { text: 'Mira git reflog y localiza el hash del commit perdido', check: function (s, h) { return h.some(function (c) { return /^git reset --hard HEAD~1/.test(c); }) && h.some(function (c) { return /^git reflog/.test(c); }); } },
+          { text: 'Recupéralo con git reset --hard <hash> (vuelve a tener tres commits)', check: function (s, h) { return h.some(function (c) { return /^git reset --hard HEAD~1/.test(c); }) && h.some(function (c) { return /^git reset --hard [0-9a-f]{7}/.test(c); }) && s.commits >= 3; } }
+        ] },
+      { id: 'release', t: '🏷️ Etiquetar una versión', intro: 'Crea el tag v1.0.0 y súbelo.',
+        tasks: [
+          { text: 'Repo con commit, remoto origin y push hecho', check: function (s) { return s.remoteBranches.indexOf('origin/main') > -1; } },
+          { text: 'Crea el tag anotado v1.0.0 (git tag -a v1.0.0 -m "Primera versión")', check: function (s) { return s.tags.indexOf('v1.0.0') > -1; } },
+          { text: 'Súbelo con git push origin v1.0.0', check: function (s, h) { return s.tags.indexOf('v1.0.0') > -1 && h.some(function (c) { return /^git push (origin v1\.0\.0|--tags)/.test(c); }); } }
+        ] },
+      { id: 'libre', t: '🧪 Práctica libre', intro: 'Sin tareas: experimenta lo que quieras.', tasks: [] }
+    ];
+
+    var sim = new GitSim(), term = document.getElementById('term'), input = document.getElementById('term-in');
+    var reto = null, hist = [], hpos = 0;
+
+    function print(text, cls) {
+      if (text === '\u0000clear') { term.innerHTML = ''; return; }
+      var div = document.createElement('div'); div.className = 'line ' + (cls || ''); div.textContent = text; term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+    function renderState() {
+      var s = sim.state(), v = document.getElementById('state-view');
+      if (!s.initialized) { v.innerHTML = '<div><b>Repo</b>sin inicializar</div><div><b>Archivos</b>' + (s.files.map(esc).join(', ') || '—') + '</div>'; return; }
+      v.innerHTML = '<div><b>Rama</b>' + esc(s.branch) + ' (' + s.commits + ' commits)</div>' +
+        '<div><b>Archivos</b>' + (s.files.map(esc).join(', ') || '—') + '</div>' +
+        '<div><b>Preparados</b>' + (s.staged.map(esc).join(', ') || '—') + '</div>' +
+        '<div><b>Modificados</b>' + (s.modified.map(esc).join(', ') || '—') + '</div>' +
+        '<div><b>Sin seguimiento</b>' + (s.untracked.map(esc).join(', ') || '—') + '</div>' +
+        '<div><b>Ramas</b>' + s.branches.map(esc).join(', ') + '</div>' +
+        '<div><b>Remotos</b>' + (s.remotes.map(esc).join(', ') || '—') + (s.remoteBranches.length ? ' → ' + s.remoteBranches.map(esc).join(', ') : '') + '</div>' +
+        (s.tags.length ? '<div><b>Tags</b>' + s.tags.map(esc).join(', ') + '</div>' : '') +
+        (s.stash ? '<div><b>Stash</b>' + s.stash + ' entrada(s)</div>' : '');
+    }
+    function pintarTareas() {
+      var box = document.getElementById('tasks');
+      box.innerHTML = '';
+      if (!reto) return;
+      var h = document.createElement('div'); h.className = 'hint'; h.textContent = reto.intro; box.appendChild(h);
+      reto.tasks.forEach(function (t, i) {
+        var d = document.createElement('div'); d.className = 'task'; d.dataset.i = i; d.textContent = '☐ ' + t.text; box.appendChild(d);
+      });
+    }
+    function checkTasks() {
+      if (!reto || !reto.tasks.length) return;
+      var s = sim.state(), all = true;
+      reto.tasks.forEach(function (t, i) {
+        var el = document.querySelector('.task[data-i="' + i + '"]');
+        var ok = false;
+        try { ok = !!t.check(s, sim.history); } catch (e) { ok = false; }
+        if (ok && !el.classList.contains('done')) { el.classList.add('done'); el.textContent = '☑ ' + t.text; }
+        if (!el.classList.contains('done')) all = false;
+      });
+      if (all && !document.getElementById('reto-ok')) {
+        var v = Tools.verdict('ok', '✔ Reto completado. Elige otro o sigue practicando.');
+        v.id = 'reto-ok';
+        document.getElementById('tasks').appendChild(v);
+        var hechos = Store.get('retos', {}); hechos[reto.id] = true; Store.set('retos', hechos);
+        pintarRetos();
+      }
+    }
+    function run(line) {
+      print('$ ' + line, 'prompt');
+      var r = sim.exec(line);
+      r.out.forEach(function (o) { print(o.text, o.cls); });
+      renderState(); checkTasks();
+    }
+    function reiniciar(msg) {
+      sim.reset(); term.innerHTML = '';
+      print(msg || 'Simulador reiniciado. Estás en /home/user/proyecto. Escribe `help` para ver los comandos.', 'warn');
+      renderState(); pintarTareas();
+    }
+    function pintarRetos() {
+      var box = document.getElementById('retos'); box.innerHTML = '';
+      var hechos = Store.get('retos', {});
+      RETOS.forEach(function (r) {
+        var p = document.createElement('span');
+        p.className = 'pill' + (reto && reto.id === r.id ? ' on' : '');
+        p.textContent = (hechos[r.id] ? '✔ ' : '') + r.t;
+        p.onclick = function () { reto = r; document.getElementById('ttitle').textContent = 'Terminal · ' + r.t; pintarRetos(); reiniciar('Reto: ' + r.t + '. ' + r.intro + ' Escribe `help` para ver los comandos.'); input.focus(); };
+        box.appendChild(p);
+      });
+    }
+    function enviar() { var v = input.value; input.value = ''; if (v.trim()) { hist.push(v); hpos = hist.length; run(v); } }
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { enviar(); }
+      else if (e.key === 'ArrowUp') { if (hpos > 0) { hpos--; input.value = hist[hpos]; } e.preventDefault(); }
+      else if (e.key === 'ArrowDown') { if (hpos < hist.length - 1) { hpos++; input.value = hist[hpos]; } else { hpos = hist.length; input.value = ''; } e.preventDefault(); }
+    });
+    document.getElementById('term-run').onclick = enviar;
+    document.getElementById('term-reset').onclick = function () { reiniciar(); };
+
+    pintarRetos();
+    var pedido = new URLSearchParams(location.search).get('reto');
+    var inicial = RETOS.filter(function (r) { return r.id === pedido; })[0] || RETOS[0];
+    reto = inicial; document.getElementById('ttitle').textContent = 'Terminal · ' + inicial.t; pintarRetos();
+    reiniciar('Reto: ' + inicial.t + '. ' + inicial.intro + ' Escribe `help` para ver los comandos.');
+    window.__sim = sim;
+  })();
+  </script>
+</body>
+</html>
